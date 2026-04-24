@@ -1,0 +1,47 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# .NET Build
+bin/
+obj/
+Debug/
+Release/
+
+# Rider / VSCode
+.idea/
+.vscode/
+
+# Node / React / Vite
+node_modules/
+dist/
+build/
+coverage/
+.npm/
+
+# Env secrets
+.env
+.env.local
+.env.development.local
+.env.production.local
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# SQL local files
+*.mdf
+*.ldf
+
+# Temp
+tmp/
+temp/

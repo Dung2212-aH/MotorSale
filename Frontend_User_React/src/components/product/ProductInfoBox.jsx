@@ -1,0 +1,227 @@
+import { Link } from 'react-router-dom';
+import QuantitySelector from '../QuantitySelector.jsx';
+import { formatCurrency } from '../../utils/formatters.js';
+
+export const defaultPromotions = [
+  'Áp dụng Phiếu quà tặng / Mã giảm giá theo sản phẩm.',
+  'Giảm giá 10% khi mua từ 5 sản phẩm trở lên.',
+  'Tặng 100.000đ mua hàng online tại hệ thống EURO Moto.',
+];
+
+function normalizeText(value) {
+  return (value || '').trim().toLowerCase();
+}
+
+function buildColorStops(name) {
+  const palette = {
+    bac: '#c7ccd4',
+    bạc: '#c7ccd4',
+    do: '#d71920',
+    đỏ: '#d71920',
+    den: '#171717',
+    đen: '#171717',
+    xanh: '#0f6ab4',
+    xam: '#6b7280',
+    xám: '#6b7280',
+    vang: '#c99a06',
+    vàng: '#c99a06',
+    trang: '#f3f4f6',
+    trắng: '#f3f4f6',
+  };
+
+  const stops = name
+    .split(/\s+/)
+    .map((part) => palette[normalizeText(part)])
+    .filter(Boolean);
+
+  return stops.length ? stops : ['#d1d5db'];
+}
+
+function buildColorStyle(name) {
+  const stops = buildColorStops(name);
+
+  if (stops.length === 1) {
+    return { background: stops[0] };
+  }
+
+  const step = 100 / stops.length;
+  const segments = stops.map((color, index) => {
+    const start = Math.round(index * step);
+    const end = Math.round((index + 1) * step);
+    return `${color} ${start}% ${end}%`;
+  });
+
+  return { backgroundImage: `linear-gradient(135deg, ${segments.join(', ')})` };
+}
+
+function ProductInfoBox({
+  product,
+  quantity,
+  onQuantityChange,
+  onAddToCart,
+  onBuyNow,
+  selectedVersion,
+  onSelectVersion,
+  selectedColor,
+  onSelectColor,
+  selectedVariant,
+  versionOptions,
+  colorOptions,
+  availableColorOptions,
+  showVersionSelector = true,
+  showColorSelector = true,
+  colorStatusText = 'Đang cập nhật',
+  fallbackNotes = [],
+}) {
+  const price = selectedVariant?.priceOverride ?? product?.salePrice ?? product?.basePrice ?? 0;
+  const formattedPrice = price > 0 ? formatCurrency(price) : 'Liên hệ';
+  const stockValue = selectedVariant?.stockQuantity ?? product?.stockQuantity;
+  const isInStock = Number(stockValue || 0) > 0 || normalizeText(selectedVariant?.status || product?.status).includes('available');
+  const infoItems = [
+    { label: 'Loại', value: product?.productType || product?.categoryName || 'Đang cập nhật' },
+    { label: 'Thương hiệu', value: product?.brandName || 'Đang cập nhật' },
+    { label: 'Tình trạng', value: isInStock ? 'Còn hàng' : product?.status || 'Liên hệ' },
+    { label: 'Mã sản phẩm', value: selectedVariant?.sku || product?.productCode || 'Đang cập nhật' },
+  ];
+
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-5 sm:p-6">
+      <div className="border-b border-zinc-100 pb-5">
+        <h1 className="text-3xl font-bold text-zinc-950 sm:text-4xl">{product?.name}</h1>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
+          {infoItems.map((item) => (
+            <div key={item.label} className="rounded-2xl bg-zinc-50 px-4 py-3">
+              <div className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">{item.label}</div>
+              <div className="mt-1 text-sm font-semibold text-zinc-800">{item.value}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-6 pt-5">
+        <div className="rounded-2xl bg-[#fff5f5] px-5 py-4">
+          <div className="text-sm font-semibold text-zinc-500">Giá bán</div>
+          <div className="mt-1 text-3xl font-bold text-[#d71920]">{formattedPrice}</div>
+        </div>
+
+        {showVersionSelector && (
+          <div>
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h2 className="text-base font-bold text-zinc-950">Phiên bản</h2>
+              {selectedVersion && <span className="text-sm text-zinc-500">{selectedVersion}</span>}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {versionOptions.map((option) => {
+                const active = option === selectedVersion;
+
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`min-h-14 rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                      active ? 'border-[#d71920] bg-[#fff5f5] text-[#d71920]' : 'border-zinc-200 bg-white text-zinc-700 hover:border-[#d71920]'
+                    }`}
+                    onClick={() => onSelectVersion(option)}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="text-base font-bold text-zinc-950">Màu sắc</h2>
+            <span className="text-sm text-zinc-500">{showColorSelector ? selectedColor || colorStatusText : colorStatusText}</span>
+          </div>
+          {showColorSelector ? (
+            <div className="grid gap-3 sm:grid-cols-2">
+              {colorOptions.map((option) => {
+                const active = option === selectedColor;
+                const available = availableColorOptions.includes(option);
+
+                return (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`flex min-h-14 items-center gap-3 rounded-2xl border px-4 py-3 text-left text-sm font-semibold transition ${
+                      active ? 'border-[#d71920] bg-[#fff5f5] text-[#d71920]' : 'border-zinc-200 bg-white text-zinc-700 hover:border-[#d71920]'
+                    } ${available ? '' : 'opacity-60'}`}
+                    onClick={() => onSelectColor(option)}
+                  >
+                    <span className="h-8 w-8 shrink-0 rounded-full border border-white shadow-sm" style={buildColorStyle(option)} />
+                    <span className="flex-1">{option}</span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm text-zinc-500">{colorStatusText}</div>
+          )}
+        </div>
+
+        {fallbackNotes.length > 0 && (
+          <div className="rounded-2xl border border-dashed border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            {fallbackNotes.join(' ')}
+          </div>
+        )}
+
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-sm font-bold text-zinc-950">Tùy chọn mua nhanh</div>
+              <div className="text-sm text-zinc-500">
+                {selectedVariant?.variantName || [selectedVersion, selectedColor].filter(Boolean).join(' / ') || 'Chọn số lượng để tiếp tục'}
+              </div>
+            </div>
+            <Link className="text-sm font-semibold text-[#d71920]" to="/products">
+              Xem sản phẩm khác
+            </Link>
+          </div>
+
+          <div className="flex flex-col gap-3">
+            <QuantitySelector value={quantity} onChange={onQuantityChange} max={Math.max(Number(stockValue || 99), 1)} />
+            <div className="grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#d71920] px-5 text-sm font-bold text-white transition hover:bg-[#b9161c]"
+                onClick={onAddToCart}
+              >
+                Thêm vào giỏ hàng
+              </button>
+              <button
+                type="button"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-zinc-900 bg-white px-5 text-sm font-bold text-zinc-900 transition hover:border-[#d71920] hover:text-[#d71920]"
+                onClick={onBuyNow}
+              >
+                Mua ngay
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-zinc-200 bg-white p-4">
+          <h3 className="text-base font-bold text-zinc-950">Thông tin nhanh</h3>
+          <div className="mt-3 grid gap-3 text-sm text-zinc-600 sm:grid-cols-2">
+            <div>
+              <span className="font-semibold text-zinc-900">Động cơ:</span> {product?.engine || 'Đang cập nhật'}
+            </div>
+            <div>
+              <span className="font-semibold text-zinc-900">Nhiên liệu:</span> {product?.fuelType || 'Đang cập nhật'}
+            </div>
+            <div>
+              <span className="font-semibold text-zinc-900">Màu ngoại thất:</span> {selectedVariant?.exteriorColor || product?.exteriorColor || selectedColor || colorStatusText}
+            </div>
+            <div>
+              <span className="font-semibold text-zinc-900">Tồn kho:</span> {stockValue ?? 'Liên hệ'}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default ProductInfoBox;

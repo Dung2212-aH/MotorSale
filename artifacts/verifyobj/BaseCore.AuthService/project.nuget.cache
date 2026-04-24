@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "R1aHS7NluLQ=",
+  "success": true,
+  "projectFilePath": "D:\\Framework_CNWeb\\FW\\BaseCore\\BaseCore.DTO\\BaseCore.DTO.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\TBC\\.nuget\\packages\\microsoft.netcore.app.ref\\8.0.26\\microsoft.netcore.app.ref.8.0.26.nupkg.sha512",
+    "C:\\Users\\TBC\\.nuget\\packages\\microsoft.windowsdesktop.app.ref\\8.0.26\\microsoft.windowsdesktop.app.ref.8.0.26.nupkg.sha512",
+    "C:\\Users\\TBC\\.nuget\\packages\\microsoft.aspnetcore.app.ref\\8.0.26\\microsoft.aspnetcore.app.ref.8.0.26.nupkg.sha512"
+  ],
+  "logs": []
+}

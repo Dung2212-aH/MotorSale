@@ -1,0 +1,15 @@
+HTTrack3.49-2+htsswf+htsjava launched on Thu, 23 Apr 2026 15:46:00 at https://euro-moto.mysapo.net/ +*.mysapo.net/* -*.mp4 -*.avi -*.mov -*.zip -*.pdf -*.woff -*.woff2 -*.ttf -*.svg
+(winhttrack "-qwr2%e0C2%Ps2u1%s%uN0%I0p3DaK0H0%kf2A %c10#L1000%f#f" -F "Mozilla/5.0 (Windows; U; Windows NT 5.0; en-US; rv:1.1) Gecko/20020826" -%F "<!-- Mirrored from %s%s by HTTrack Website Copier/3.x [XR&CO'2014], %s -->" -%l "en, *" https://euro-moto.mysapo.net/ -O1 "D:\Framework_CNWeb\FW\BaseCore\Frontend_User" +*.mysapo.net/* -*.mp4 -*.avi -*.mov -*.zip -*.pdf -*.woff -*.woff2 -*.ttf -*.svg )
+
+Information, Warnings and Errors reported for this mirror:
+note:	the hts-log.txt file, and hts-cache folder, may contain sensitive information,
+	such as username/password authentication for websites mirrored in this project
+	do not share these files/folders if you want these information to remain private
+
+15:46:00	Warning: 	* security warning: maximum number of connections per second limited to 5.000000 to avoid server overload
+15:47:09	Error: 	"Not Found" (404) at link https://euro-moto.mysapo.net/s (from https://euro-moto.mysapo.net/)
+15:47:56	Error: 	"Not Found" (404) at link https://euro-moto.mysapo.net/cdn-cgi/l/email-protection (from https://euro-moto.mysapo.net/)
+15:48:00	Error: 	"Not Found" (404) at link https://euro-moto.mysapo.net/products/ (from https://euro-moto.mysapo.net/)
+
+HTTrack Website Copier/3.49-2 mirror complete in 2 minutes 11 seconds : 82 links scanned, 78 files written (23236700 bytes overall) [5529525 bytes received at 42210 bytes/sec], 23735282 bytes transferred using HTTP compression in 82 files, ratio 22%, 41.0 requests per connection
+(3 errors, 1 warnings, 0 messages)
