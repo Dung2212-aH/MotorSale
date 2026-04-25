@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { authApi } from '../api/authApi.js';
-import { cartApi } from '../api/cartApi.js';
 import { productApi } from '../api/productApi.js';
 import Breadcrumb from '../components/Breadcrumb.jsx';
 import ErrorState from '../components/ErrorState.jsx';
@@ -13,6 +12,8 @@ import ProductPromotionBox from '../components/product/ProductPromotionBox.jsx';
 import ProductTabs from '../components/product/ProductTabs.jsx';
 import ProductVoucherBox from '../components/product/ProductVoucherBox.jsx';
 import RelatedProductSection from '../components/product/RelatedProductSection.jsx';
+import { useCart } from '../contexts/CartContext.jsx';
+import { useNotification } from '../contexts/NotificationContext.jsx';
 import { useAsync } from '../hooks/useAsync.js';
 import { normalizeProductOptions } from '../utils/productOptions.js';
 import { storage } from '../utils/storage.js';
@@ -49,6 +50,8 @@ function ProductDetailPage() {
   const [selectedVersion, setSelectedVersion] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
+  const { addItem } = useCart();
+  const { notify } = useNotification();
   const { data: product, loading, error, run } = useAsync(() => productApi.getProductById(id), [id]);
 
   const options = useMemo(() => normalizeProductOptions(product), [product]);
@@ -293,15 +296,33 @@ function ProductDetailPage() {
     }
 
     if (!authApi.getToken()) {
+      notify('Vui lòng đăng nhập để thêm vào giỏ hàng', 'error');
       navigate('/login?redirect=/cart');
       return;
     }
 
-    await cartApi.addItem({
-      productId: product.id,
-      productVariantId: Number.isFinite(Number(selectedVariant?.id)) ? Number(selectedVariant.id) : undefined,
-      quantity,
-    });
+    if (options.hasVariantData && !selectedVariant?.id) {
+      notify('Vui lòng chọn phiên bản/màu sắc', 'error');
+      return;
+    }
+
+    const stockValue = selectedVariant?.stockQuantity ?? product?.stockQuantity;
+    if (Number(stockValue || 0) <= 0 && !String(selectedVariant?.status || product?.status || '').toLowerCase().includes('available')) {
+      notify('Sản phẩm đã hết hàng', 'error');
+      return;
+    }
+
+    try {
+      await addItem({
+        productId: product.id,
+        variantId: Number.isFinite(Number(selectedVariant?.id)) ? Number(selectedVariant.id) : null,
+        quantity,
+      });
+      notify('Đã thêm vào giỏ hàng', 'success');
+    } catch (err) {
+      notify(err.message || 'Không thể thêm vào giỏ hàng', 'error');
+      return;
+    }
 
     if (redirectToCart) {
       navigate('/cart');
@@ -310,12 +331,24 @@ function ProductDetailPage() {
 
   async function quickAdd(item) {
     if (!authApi.getToken()) {
+      notify('Vui lòng đăng nhập để thêm vào giỏ hàng', 'error');
       navigate('/login?redirect=/cart');
       return;
     }
 
-    await cartApi.addItem({ productId: item.id, quantity: 1 });
-    navigate('/cart');
+    const detail = await productApi.getProductById(item.id);
+    if (detail.variants?.length) {
+      notify('Vui lòng chọn phiên bản/màu sắc', 'error');
+      navigate(`/products/${item.id}`);
+      return;
+    }
+
+    try {
+      await addItem({ productId: item.id, quantity: 1 });
+      notify('Đã thêm vào giỏ hàng', 'success');
+    } catch (err) {
+      notify(err.message || 'Không thể thêm vào giỏ hàng', 'error');
+    }
   }
 
   const fallbackNotes = options.fallbackNotes;

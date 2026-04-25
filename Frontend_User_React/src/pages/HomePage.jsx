@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/authApi.js';
-import { cartApi } from '../api/cartApi.js';
+import { orderApi } from '../api/orderApi.js';
 import { productApi } from '../api/productApi.js';
 import { brandAssets, homeCategoryReferences, serviceHighlights } from '../assets/siteData.js';
 import CategoryMenu from '../components/CategoryMenu.jsx';
@@ -9,6 +9,8 @@ import ErrorState from '../components/ErrorState.jsx';
 import LoadingState from '../components/LoadingState.jsx';
 import ProductGrid from '../components/ProductGrid.jsx';
 import SectionTitle from '../components/SectionTitle.jsx';
+import { useCart } from '../contexts/CartContext.jsx';
+import { useNotification } from '../contexts/NotificationContext.jsx';
 
 function normalizeText(value = '') {
   return value
@@ -43,24 +45,40 @@ function buildFeaturedCategories(categories) {
 function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { addItem } = useCart();
+  const { notify } = useNotification();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [activeService, setActiveService] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [pendingOrders, setPendingOrders] = useState([]);
 
   async function loadHomeData() {
     setLoading(true);
     setError(null);
 
     try {
-      const [productsResponse, categoriesResponse] = await Promise.all([
+      const tasks = [
         productApi.getProducts({ page: 1, pageSize: 12 }),
         productApi.getCategories(),
-      ]);
+      ];
+
+      if (authApi.getToken()) {
+        tasks.push(orderApi.getMyOrders().catch(() => []));
+      }
+
+      const results = await Promise.all(tasks);
+      const productsResponse = results[0];
+      const categoriesResponse = results[1];
+      const ordersResponse = results.length > 2 ? results[2] : [];
 
       setProducts(productsResponse.items);
       setCategories(categoriesResponse.filter((category) => category.isActive));
+      
+      if (Array.isArray(ordersResponse)) {
+        setPendingOrders(ordersResponse.filter(o => o.orderType === 'Deposit' && o.remainingAmount > 0 && o.orderStatus !== 'Cancelled'));
+      }
     } catch (err) {
       setError(err);
     } finally {
@@ -87,12 +105,24 @@ function HomePage() {
 
   async function addToCart(product) {
     if (!authApi.getToken()) {
+      notify('Vui lòng đăng nhập để thêm vào giỏ hàng', 'error');
       navigate('/login?redirect=/cart');
       return;
     }
 
-    await cartApi.addItem({ productId: product.id, quantity: 1 });
-    navigate('/cart');
+    const detail = await productApi.getProductById(product.id);
+    if (detail.variants?.length) {
+      notify('Vui lòng chọn phiên bản/màu sắc', 'error');
+      navigate(`/products/${product.id}`);
+      return;
+    }
+
+    try {
+      await addItem({ productId: product.id, quantity: 1 });
+      notify('Đã thêm vào giỏ hàng', 'success');
+    } catch (err) {
+      notify(err.message || 'Không thể thêm vào giỏ hàng', 'error');
+    }
   }
 
   function renderProductsBlock(items, emptyMessage) {
@@ -121,6 +151,27 @@ function HomePage() {
 
   return (
     <>
+      {pendingOrders.length > 0 && (
+        <div className="bg-[#fff6e6] px-4 py-3 border-b border-[#f0a327]/30">
+          <div className="mx-auto flex max-w-[1200px] flex-col items-center justify-between gap-3 sm:flex-row">
+            <div className="flex items-center gap-2 text-sm font-medium text-[#d71920]">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="8" x2="12" y2="12"></line>
+                <line x1="12" y1="16" x2="12.01" y2="16"></line>
+              </svg>
+              <span>Bạn có {pendingOrders.length} đơn hàng đang đặt cọc chưa thanh toán phần còn lại.</span>
+            </div>
+            <Link 
+              to={`/orders/${pendingOrders[0].id}`}
+              className="whitespace-nowrap rounded-full bg-[#d71920] px-4 py-1.5 text-xs font-bold uppercase text-white transition hover:bg-[#b61016]"
+            >
+              Thanh toán ngay
+            </Link>
+          </div>
+        </div>
+      )}
+
       <section id="trang-chu" className="scroll-mt-32 bg-[#101010]">
         <Link to="/products">
           <img src={brandAssets.slider} alt="EURO Moto" className="h-auto max-h-[560px] w-full object-cover" />

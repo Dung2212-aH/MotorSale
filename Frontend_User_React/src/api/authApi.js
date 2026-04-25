@@ -1,4 +1,4 @@
-import { apiRequest } from './axiosClient.js';
+import { apiRequest, getAuthToken } from './axiosClient.js';
 import { API_CONFIG, API_ENDPOINTS } from './endpoints.js';
 import { storage } from '../utils/storage.js';
 
@@ -32,7 +32,9 @@ export const authApi = {
 
     if (user.token) {
       storage.set(API_CONFIG.tokenKey, user.token);
+      storage.set(API_CONFIG.legacyTokenKey, user.token);
       storage.setJson(API_CONFIG.userKey, user);
+      storage.setJson(API_CONFIG.legacyUserKey, user);
     }
 
     return user;
@@ -57,15 +59,17 @@ export const authApi = {
 
   logout() {
     storage.remove(API_CONFIG.tokenKey);
+    storage.remove(API_CONFIG.legacyTokenKey);
     storage.remove(API_CONFIG.userKey);
+    storage.remove(API_CONFIG.legacyUserKey);
   },
 
   getCurrentUser() {
-    return storage.getJson(API_CONFIG.userKey);
+    return storage.getJson(API_CONFIG.userKey) || storage.getJson(API_CONFIG.legacyUserKey);
   },
 
   getToken() {
-    return storage.get(API_CONFIG.tokenKey);
+    return getAuthToken();
   },
 };
 

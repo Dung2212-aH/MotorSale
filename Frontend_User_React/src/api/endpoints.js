@@ -5,7 +5,9 @@ export const API_CONFIG = {
   productServiceUrl: import.meta.env.VITE_PRODUCT_SERVICE_URL || 'http://localhost:5001',
   orderServiceUrl: import.meta.env.VITE_ORDER_SERVICE_URL || 'http://localhost:5001',
   tokenKey: 'basecore_user_token',
+  legacyTokenKey: 'token',
   userKey: 'basecore_user_profile',
+  legacyUserKey: 'user',
 };
 
 export const API_ENDPOINTS = {
@@ -23,6 +25,7 @@ export const API_ENDPOINTS = {
   },
   cart: {
     detail: '/api/cart',
+    count: '/api/cart/count',
     items: '/api/cart/items',
     item: (id) => `/api/cart/items/${id}`,
   },

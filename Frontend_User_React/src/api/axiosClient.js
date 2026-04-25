@@ -2,8 +2,58 @@ import axios from 'axios';
 import { API_CONFIG } from './endpoints.js';
 import { storage } from '../utils/storage.js';
 
+function decodeJwtPayload(token) {
+  try {
+    const payload = token.split('.')[1];
+    const normalizedPayload = payload.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(window.atob(normalizedPayload));
+  } catch {
+    return null;
+  }
+}
+
+function normalizeStoredToken(token) {
+  if (!token) {
+    return null;
+  }
+
+  const normalizedToken = token.trim().replace(/^"|"$/g, '').replace(/^Bearer\s+/i, '');
+  return normalizedToken || null;
+}
+
+function isExpiredToken(token) {
+  if (typeof window === 'undefined') {
+    return false;
+  }
+
+  const payload = decodeJwtPayload(token);
+  if (!payload?.exp) {
+    return false;
+  }
+
+  return payload.exp * 1000 <= Date.now();
+}
+
+function clearAuthStorage() {
+  storage.remove(API_CONFIG.tokenKey);
+  storage.remove(API_CONFIG.legacyTokenKey);
+  storage.remove(API_CONFIG.userKey);
+  storage.remove(API_CONFIG.legacyUserKey);
+}
+
+export function getAuthToken() {
+  const token = normalizeStoredToken(storage.get(API_CONFIG.tokenKey) || storage.get(API_CONFIG.legacyTokenKey));
+
+  if (token && isExpiredToken(token)) {
+    clearAuthStorage();
+    return null;
+  }
+
+  return token;
+}
+
 function attachAuth(config) {
-  const token = storage.get(API_CONFIG.tokenKey);
+  const token = getAuthToken();
 
   if (token) {
     config.headers = {
@@ -55,11 +105,15 @@ function shouldTryFallback(error) {
   return !error.status || [404, 405, 500, 502, 503, 504].includes(error.status);
 }
 
+function shouldTryAuthenticatedFallback(error) {
+  return error.status === 401 && Boolean(getAuthToken());
+}
+
 export async function apiRequest(config, fallbackBaseUrls = []) {
   try {
     return await gatewayClient.request(config);
   } catch (error) {
-    if (!shouldTryFallback(error)) {
+    if (!shouldTryFallback(error) && !shouldTryAuthenticatedFallback(error)) {
       throw error;
     }
 

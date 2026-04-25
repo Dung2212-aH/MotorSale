@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/authApi.js';
 import { brandAssets, navItems, productBrandGroups, socialLinks } from '../assets/siteData.js';
+import { useCart } from '../contexts/CartContext.jsx';
 
 function IconPin() {
   return (
@@ -90,17 +91,20 @@ function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [productMenuOpen, setProductMenuOpen] = useState(false);
   const [currentUser, setCurrentUser] = useState(() => authApi.getCurrentUser());
+  const { count: cartCount, refreshCart, resetCart } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     setCurrentUser(authApi.getCurrentUser());
+    refreshCart().catch(() => resetCart());
   }, [location.pathname, location.search, location.hash]);
 
   useEffect(() => {
     function handleStorage(event) {
-      if (!event.key || event.key.includes('basecore_user')) {
+      if (!event.key || event.key.includes('basecore_user') || event.key === 'token' || event.key === 'user') {
         setCurrentUser(authApi.getCurrentUser());
+        refreshCart().catch(() => resetCart());
       }
     }
 
@@ -115,6 +119,7 @@ function Header() {
   function handleLogout() {
     authApi.logout();
     setCurrentUser(null);
+    resetCart();
     navigate('/');
   }
 
@@ -269,7 +274,7 @@ function Header() {
               <Link className="group relative inline-grid h-11 w-11 place-items-center rounded-full text-[#111] transition duration-300 hover:bg-zinc-100 hover:text-[#d71920]" to="/cart" aria-label="Giỏ hàng">
                 <IconBag />
                 <span className="absolute right-0 top-1 grid h-[18px] w-[18px] place-items-center rounded-full bg-[#d71920] text-[11px] font-extrabold text-white">
-                  0
+                  {cartCount}
                 </span>
               </Link>
               <button

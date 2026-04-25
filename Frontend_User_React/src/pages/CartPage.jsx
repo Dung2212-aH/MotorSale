@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { authApi } from '../api/authApi.js';
-import { cartApi } from '../api/cartApi.js';
 import Breadcrumb from '../components/Breadcrumb.jsx';
 import CartItemRow from '../components/CartItemRow.jsx';
 import CartSummary from '../components/CartSummary.jsx';
 import EmptyCart from '../components/EmptyCart.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import LoadingState from '../components/LoadingState.jsx';
+import { useCart } from '../contexts/CartContext.jsx';
 
 function CartPage() {
-  const [cart, setCart] = useState({ items: [] });
-  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+  const { cart, loading, refreshCart, updateItem, removeItem: removeCartItem } = useCart();
   const [error, setError] = useState(null);
   const [checkoutNotice, setCheckoutNotice] = useState('');
   const isAuthenticated = Boolean(authApi.getToken());
@@ -22,15 +22,18 @@ function CartPage() {
       return;
     }
 
-    setLoading(true);
     setError(null);
 
     try {
-      setCart(await cartApi.getCart());
+      await refreshCart();
     } catch (err) {
+      if (err.status === 401) {
+        authApi.logout();
+        navigate('/login?redirect=/cart', { replace: true });
+        return;
+      }
+
       setError(err);
-    } finally {
-      setLoading(false);
     }
   }
 
@@ -39,17 +42,15 @@ function CartPage() {
   }, [isAuthenticated]);
 
   async function updateQuantity(itemId, quantity) {
-    await cartApi.updateItem(itemId, quantity);
-    await loadCart();
+    await updateItem(itemId, quantity);
   }
 
   async function removeItem(itemId) {
-    await cartApi.removeItem(itemId);
-    await loadCart();
+    await removeCartItem(itemId);
   }
 
   function checkout() {
-    setCheckoutNotice('Checkout flow đang chờ màn hình nhập thông tin giao hàng.');
+    navigate('/checkout');
   }
 
   const items = cart?.items || [];

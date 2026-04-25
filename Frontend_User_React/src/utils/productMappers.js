@@ -46,6 +46,7 @@ export function normalizeProduct(raw) {
     images: images
       .map((image) => ({
         id: valueOf(image, 'id'),
+        productVariantId: valueOf(image, 'productVariantId'),
         imageUrl: normalizeImageUrl(valueOf(image, 'imageUrl') || valueOf(image, 'url')),
         altText: valueOf(image, 'altText'),
         isPrimary: valueOf(image, 'isPrimary'),
@@ -61,8 +62,15 @@ export function normalizeProduct(raw) {
       stockQuantity: valueOf(variant, 'stockQuantity'),
       status: valueOf(variant, 'status'),
       version: valueOf(variant, 'version'),
-      exteriorColor: valueOf(variant, 'exteriorColor'),
-      interiorColor: valueOf(variant, 'interiorColor'),
+      color: valueOf(variant, 'color'),
+      images: (valueOf(variant, 'images') || []).map((image) => ({
+        id: valueOf(image, 'id'),
+        productVariantId: valueOf(image, 'productVariantId'),
+        imageUrl: normalizeImageUrl(valueOf(image, 'imageUrl') || valueOf(image, 'url')),
+        altText: valueOf(image, 'altText'),
+        isPrimary: valueOf(image, 'isPrimary'),
+        sortOrder: valueOf(image, 'sortOrder') || 0,
+      })),
       raw: variant,
     })),
     raw,
@@ -109,16 +117,27 @@ export function normalizeFilters(response) {
 
 export function normalizeCart(response) {
   const items = response?.items || response?.Items || [];
-  return {
-    ...response,
-    items: items.map((item) => ({
+  const normalizedItems = items.map((item) => {
+    const quantity = Number(valueOf(item, 'quantity') || 1);
+    const unitPrice = Number(valueOf(item, 'unitPrice') || 0);
+    const lineTotal = Number(valueOf(item, 'lineTotal') || unitPrice * quantity);
+
+    return {
       id: valueOf(item, 'id'),
       productId: valueOf(item, 'productId'),
       productVariantId: valueOf(item, 'productVariantId'),
-      quantity: valueOf(item, 'quantity') || 1,
-      unitPrice: Number(valueOf(item, 'unitPrice') || 0),
-      lineTotal: Number(valueOf(item, 'lineTotal') || 0),
+      quantity,
+      unitPrice,
+      lineTotal,
       product: normalizeProduct(valueOf(item, 'product')) || {},
-    })),
+      productVariant: valueOf(item, 'productVariant'),
+    };
+  });
+
+  return {
+    ...response,
+    items: normalizedItems,
+    totalItems: Number(valueOf(response, 'totalItems') ?? normalizedItems.reduce((sum, item) => sum + item.quantity, 0)),
+    subtotal: Number(valueOf(response, 'subtotal') ?? normalizedItems.reduce((sum, item) => sum + item.lineTotal, 0)),
   };
 }

@@ -12,6 +12,16 @@ export const orderApi = {
     );
   },
 
+  getOrderById(id) {
+    return apiRequest(
+      {
+        method: 'GET',
+        url: `${API_ENDPOINTS.orders.list}/${id}`,
+      },
+      [API_CONFIG.orderServiceUrl, API_CONFIG.productServiceUrl],
+    );
+  },
+
   createOrder(payload) {
     return apiRequest(
       {

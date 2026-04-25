@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { authApi } from '../api/authApi.js';
-import { cartApi } from '../api/cartApi.js';
 import { productApi } from '../api/productApi.js';
 import Breadcrumb from '../components/Breadcrumb.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import LoadingState from '../components/LoadingState.jsx';
 import ProductFilters from '../components/ProductFilters.jsx';
 import ProductGrid from '../components/ProductGrid.jsx';
+import { useCart } from '../contexts/CartContext.jsx';
+import { useNotification } from '../contexts/NotificationContext.jsx';
 
 function cleanParams(params) {
   return Object.fromEntries(Object.entries(params).filter(([, value]) => value !== '' && value !== undefined && value !== null));
@@ -65,6 +66,8 @@ function matchesProductType(product, expectedProductType) {
 function ProductListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { addItem } = useCart();
+  const { notify } = useNotification();
   const [filters, setFilters] = useState(null);
   const [productsData, setProductsData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -179,12 +182,24 @@ function ProductListPage() {
 
   async function addToCart(product) {
     if (!authApi.getToken()) {
+      notify('Vui lòng đăng nhập để thêm vào giỏ hàng', 'error');
       navigate('/login?redirect=/cart');
       return;
     }
 
-    await cartApi.addItem({ productId: product.id, quantity: 1 });
-    navigate('/cart');
+    const detail = await productApi.getProductById(product.id);
+    if (detail.variants?.length) {
+      notify('Vui lòng chọn phiên bản/màu sắc', 'error');
+      navigate(`/products/${product.id}`);
+      return;
+    }
+
+    try {
+      await addItem({ productId: product.id, quantity: 1 });
+      notify('Đã thêm vào giỏ hàng', 'success');
+    } catch (err) {
+      notify(err.message || 'Không thể thêm vào giỏ hàng', 'error');
+    }
   }
 
   function updateFilters(values) {

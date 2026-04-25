@@ -22,5 +22,6 @@ export function getProductPrice(product) {
 }
 
 export function getProductImage(product) {
-  return normalizeImageUrl(product?.mainImageUrl || product?.imageUrl || product?.images?.[0]?.imageUrl || '');
+  const primaryImage = product?.images?.find((image) => image?.isPrimary)?.imageUrl;
+  return normalizeImageUrl(primaryImage || product?.images?.[0]?.imageUrl || product?.mainImageUrl || product?.imageUrl || '');
 }
