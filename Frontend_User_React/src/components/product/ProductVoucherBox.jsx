@@ -1,22 +1,68 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
-const vouchers = [
-  {
-    code: 'DOLA20',
-    description: 'Nhập mã để giảm ngay 20.000đ cho đơn hàng từ 200.000đ.',
-  },
-  {
-    code: 'DOLA50',
-    description: 'Nhập mã để giảm ngay 50.000đ cho đơn hàng từ 500.000đ.',
-  },
-  {
-    code: 'FREESHIP',
-    description: 'Nhập mã để miễn phí vận chuyển cho đơn từ 300.000đ.',
-  },
-];
+import { voucherApi } from '../../api/voucherApi.js';
 
-function ProductVoucherBox() {
+function formatMoney(value) {
+  return `${Number(value || 0).toLocaleString('vi-VN')}đ`;
+}
+
+function formatVoucherDescription(voucher) {
+  if (voucher.description) {
+    return voucher.description;
+  }
+
+  const minOrder = formatMoney(voucher.minOrderValue);
+
+  if (voucher.discountType === 'Percent') {
+    const maxDiscount = voucher.maxDiscountValue ? `, tối đa ${formatMoney(voucher.maxDiscountValue)}` : '';
+    return `Giảm ${Number(voucher.discountValue || 0).toLocaleString('vi-VN')}% cho đơn từ ${minOrder}${maxDiscount}.`;
+  }
+
+  if (voucher.discountType === 'FreeShipping') {
+    return `Miễn phí vận chuyển cho đơn từ ${minOrder}.`;
+  }
+
+  return `Giảm ${formatMoney(voucher.discountValue)} cho đơn từ ${minOrder}.`;
+}
+
+function ProductVoucherBox({ product }) {
+  const [vouchers, setVouchers] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [copiedCode, setCopiedCode] = useState('');
+
+  useEffect(() => {
+    let alive = true;
+
+    async function loadVouchers() {
+      setLoading(true);
+
+      try {
+        const data = await voucherApi.listVouchers({
+          productId: product?.id,
+          categoryId: product?.categoryId,
+          brandId: product?.brandId,
+        });
+
+        if (alive) {
+          setVouchers(Array.isArray(data) ? data : data?.$values || []);
+        }
+      } catch {
+        if (alive) {
+          setVouchers([]);
+        }
+      } finally {
+        if (alive) {
+          setLoading(false);
+        }
+      }
+    }
+
+    loadVouchers();
+
+    return () => {
+      alive = false;
+    };
+  }, [product?.id, product?.categoryId, product?.brandId]);
 
   async function copyCode(code) {
     try {
@@ -26,6 +72,10 @@ function ProductVoucherBox() {
     } catch {
       setCopiedCode('');
     }
+  }
+
+  if (!loading && vouchers.length === 0) {
+    return null;
   }
 
   return (
@@ -43,26 +93,32 @@ function ProductVoucherBox() {
       </div>
 
       <div className="grid gap-4 p-5 lg:grid-cols-3">
-        {vouchers.map((voucher) => {
-          const copied = copiedCode === voucher.code;
+        {loading &&
+          [1, 2, 3].map((item) => (
+            <div key={item} className="h-32 animate-pulse rounded-2xl border border-dashed border-zinc-200 bg-zinc-50" />
+          ))}
 
-          return (
-            <div key={voucher.code} className="rounded-2xl border border-dashed border-[#f3c7c9] bg-[#fff9f9] p-4">
-              <div className="text-sm leading-6 text-zinc-700">
-                Nhập mã <b>{voucher.code}</b>. {voucher.description}
+        {!loading &&
+          vouchers.map((voucher) => {
+            const copied = copiedCode === voucher.code;
+
+            return (
+              <div key={voucher.code} className="rounded-2xl border border-dashed border-[#f3c7c9] bg-[#fff9f9] p-4">
+                <div className="text-sm leading-6 text-zinc-700">
+                  Nhập mã <b>{voucher.code}</b>. {formatVoucherDescription(voucher)}
+                </div>
+                <button
+                  type="button"
+                  className={`mt-4 inline-flex min-h-10 items-center justify-center rounded-xl px-4 text-sm font-bold transition ${
+                    copied ? 'bg-zinc-900 text-white' : 'bg-[#d71920] text-white hover:bg-[#b9161c]'
+                  }`}
+                  onClick={() => copyCode(voucher.code)}
+                >
+                  {copied ? 'Đã sao chép' : 'Sao chép'}
+                </button>
               </div>
-              <button
-                type="button"
-                className={`mt-4 inline-flex min-h-10 items-center justify-center rounded-xl px-4 text-sm font-bold transition ${
-                  copied ? 'bg-zinc-900 text-white' : 'bg-[#d71920] text-white hover:bg-[#b9161c]'
-                }`}
-                onClick={() => copyCode(voucher.code)}
-              >
-                {copied ? 'Đã sao chép' : 'Sao chép'}
-              </button>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
     </div>
   );

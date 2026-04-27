@@ -51,7 +51,7 @@ const MainLayout = ({ children }) => {
             <aside className="main-sidebar sidebar-dark-primary elevation-4">
                 <Link to="/" className="brand-link">
                     <span className="brand-text font-weight-light ml-3">
-                        <b>Auto</b> Showroom
+                        <b>Motorcycle</b> Showroom
                     </span>
                 </Link>
 
@@ -75,8 +75,8 @@ const MainLayout = ({ children }) => {
                             </li>
                             <li className="nav-item">
                                 <Link to="/products" className={`nav-link ${isActive('/products')}`}>
-                                    <i className="nav-icon fas fa-car"></i>
-                                    <p>Cars & Accessories</p>
+                                    <i className="nav-icon fas fa-motorcycle"></i>
+                                    <p>Motorcycles & Accessories</p>
                                 </Link>
                             </li>
                             <li className="nav-item">
@@ -103,7 +103,7 @@ const MainLayout = ({ children }) => {
 
             {/* Footer */}
             <footer className="main-footer">
-                <strong>Copyright &copy; 2026 <a href="#">BaseCore Auto Showroom</a>.</strong>
+                <strong>Copyright &copy; 2026 <a href="#">BaseCore Motorcycle Showroom</a>.</strong>
                 <div className="float-right d-none d-sm-inline-block">
                     <b>Version</b> 1.0.0
                 </div>

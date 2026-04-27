@@ -6,7 +6,7 @@ const emptyProduct = {
     productCode: '',
     name: '',
     slug: '',
-    productType: 'Car',
+    productType: 'Motorcycle',
     categoryId: '',
     brandId: '',
     carModelId: '',
@@ -17,18 +17,6 @@ const emptyProduct = {
     mainImageUrl: '',
     shortDescription: '',
     description: '',
-    condition: 'New',
-    year: '',
-    mileage: '',
-    exteriorColor: '',
-    interiorColor: '',
-    seats: '',
-    transmission: 'Automatic',
-    fuelType: 'Gasoline',
-    engine: '',
-    driveType: 'FWD',
-    vin: '',
-    licensePlate: '',
     status: 'Available',
     isActive: true,
 };
@@ -120,9 +108,6 @@ const Products = () => {
                 carModelId: product.carModelId || '',
                 showroomId: product.showroomId || '',
                 salePrice: product.salePrice ?? '',
-                year: product.year ?? '',
-                mileage: product.mileage ?? '',
-                seats: product.seats ?? '',
             });
         } else {
             setEditingProduct(null);
@@ -160,26 +145,11 @@ const Products = () => {
                 basePrice: Number(formData.basePrice),
                 salePrice: numberOrNull(formData.salePrice),
                 stockQuantity: parseInt(formData.stockQuantity, 10),
-                year: intOrNull(formData.year),
-                mileage: intOrNull(formData.mileage),
-                seats: intOrNull(formData.seats),
             };
 
             if (data.productType === 'Accessory') {
                 data.brandId = null;
                 data.carModelId = null;
-                data.condition = null;
-                data.year = null;
-                data.mileage = null;
-                data.exteriorColor = null;
-                data.interiorColor = null;
-                data.seats = null;
-                data.transmission = null;
-                data.fuelType = null;
-                data.engine = null;
-                data.driveType = null;
-                data.vin = null;
-                data.licensePlate = null;
             }
 
             if (editingProduct) {
@@ -227,7 +197,7 @@ const Products = () => {
                 <div className="container-fluid">
                     <div className="row mb-2">
                         <div className="col-sm-6">
-                            <h1 className="m-0">Vehicle & Accessory Catalog</h1>
+                            <h1 className="m-0">Motorcycle & Accessory Catalog</h1>
                         </div>
                     </div>
                 </div>
@@ -251,7 +221,7 @@ const Products = () => {
                                     <div className="col-md-2 mb-2">
                                         <select className="form-control" value={query.productType} onChange={(e) => setQuery({ ...query, productType: e.target.value })}>
                                             <option value="">All types</option>
-                                            <option value="Car">Cars</option>
+                                            <option value="Motorcycle">Motorcycles</option>
                                             <option value="Accessory">Accessories</option>
                                         </select>
                                     </div>
@@ -300,7 +270,7 @@ const Products = () => {
                                 <div className="col-md-9 text-right">
                                     {isAdmin() && (
                                         <button className="btn btn-success" onClick={() => openModal()}>
-                                            <i className="fas fa-plus"></i> Add Vehicle / Accessory
+                                            <i className="fas fa-plus"></i> Add Motorcycle / Accessory
                                         </button>
                                     )}
                                 </div>
@@ -337,12 +307,12 @@ const Products = () => {
                                                         <td>{product.productCode}</td>
                                                         <td>
                                                             <strong>{product.name}</strong>
-                                                            <div className="text-muted small">{product.category?.name}</div>
+                                                            <div className="text-muted small">{product.categoryName}</div>
                                                         </td>
                                                         <td>{product.productType}</td>
                                                         <td>
-                                                            {product.brand?.name || '-'}
-                                                            {product.carModel?.name && <span> / {product.carModel.name}</span>}
+                                                            {product.brandName || '-'}
+                                                            {product.carModelName && <span> / {product.carModelName}</span>}
                                                         </td>
                                                         <td>
                                                             {priceOf(product)?.toLocaleString()} VND
@@ -423,7 +393,7 @@ const Products = () => {
                                         <div className="form-group col-md-3">
                                             <label>Type</label>
                                             <select className="form-control" value={formData.productType} onChange={(e) => setFormData({ ...formData, productType: e.target.value })}>
-                                                <option value="Car">Car</option>
+                                                <option value="Motorcycle">Motorcycle</option>
                                                 <option value="Accessory">Accessory</option>
                                             </select>
                                         </div>
@@ -471,97 +441,23 @@ const Products = () => {
                                         </div>
                                     </div>
 
-                                    {formData.productType === 'Car' && (
-                                        <>
-                                            <div className="row">
-                                                <div className="form-group col-md-3">
-                                                    <label>Brand</label>
-                                                    <select className="form-control" value={formData.brandId} onChange={(e) => setFormData({ ...formData, brandId: e.target.value, carModelId: '' })}>
-                                                        <option value="">Select brand</option>
-                                                        {filters.brands.map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
-                                                    </select>
-                                                </div>
-                                                <div className="form-group col-md-3">
-                                                    <label>Model</label>
-                                                    <select className="form-control" value={formData.carModelId} onChange={(e) => setFormData({ ...formData, carModelId: e.target.value })}>
-                                                        <option value="">Select model</option>
-                                                        {carModelsByBrand.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}
-                                                    </select>
-                                                </div>
-                                                <div className="form-group col-md-2">
-                                                    <label>Condition</label>
-                                                    <select className="form-control" value={formData.condition || ''} onChange={(e) => setFormData({ ...formData, condition: e.target.value })}>
-                                                        <option value="New">New</option>
-                                                        <option value="Used">Used</option>
-                                                    </select>
-                                                </div>
-                                                <div className="form-group col-md-2">
-                                                    <label>Year</label>
-                                                    <input type="number" className="form-control" value={formData.year} onChange={(e) => setFormData({ ...formData, year: e.target.value })} />
-                                                </div>
-                                                <div className="form-group col-md-2">
-                                                    <label>Mileage</label>
-                                                    <input type="number" className="form-control" value={formData.mileage} onChange={(e) => setFormData({ ...formData, mileage: e.target.value })} />
-                                                </div>
+                                    {formData.productType === 'Motorcycle' && (
+                                        <div className="row">
+                                            <div className="form-group col-md-6">
+                                                <label>Brand</label>
+                                                <select className="form-control" value={formData.brandId} onChange={(e) => setFormData({ ...formData, brandId: e.target.value, carModelId: '' })}>
+                                                    <option value="">Select brand</option>
+                                                    {filters.brands.map(brand => <option key={brand.id} value={brand.id}>{brand.name}</option>)}
+                                                </select>
                                             </div>
-
-                                            <div className="row">
-                                                <div className="form-group col-md-2">
-                                                    <label>Exterior</label>
-                                                    <input className="form-control" value={formData.exteriorColor || ''} onChange={(e) => setFormData({ ...formData, exteriorColor: e.target.value })} />
-                                                </div>
-                                                <div className="form-group col-md-2">
-                                                    <label>Interior</label>
-                                                    <input className="form-control" value={formData.interiorColor || ''} onChange={(e) => setFormData({ ...formData, interiorColor: e.target.value })} />
-                                                </div>
-                                                <div className="form-group col-md-2">
-                                                    <label>Seats</label>
-                                                    <input type="number" className="form-control" value={formData.seats} onChange={(e) => setFormData({ ...formData, seats: e.target.value })} />
-                                                </div>
-                                                <div className="form-group col-md-2">
-                                                    <label>Transmission</label>
-                                                    <select className="form-control" value={formData.transmission || ''} onChange={(e) => setFormData({ ...formData, transmission: e.target.value })}>
-                                                        <option value="Manual">Manual</option>
-                                                        <option value="Automatic">Automatic</option>
-                                                        <option value="CVT">CVT</option>
-                                                        <option value="DCT">DCT</option>
-                                                    </select>
-                                                </div>
-                                                <div className="form-group col-md-2">
-                                                    <label>Fuel</label>
-                                                    <select className="form-control" value={formData.fuelType || ''} onChange={(e) => setFormData({ ...formData, fuelType: e.target.value })}>
-                                                        <option value="Gasoline">Gasoline</option>
-                                                        <option value="Diesel">Diesel</option>
-                                                        <option value="Hybrid">Hybrid</option>
-                                                        <option value="Electric">Electric</option>
-                                                    </select>
-                                                </div>
-                                                <div className="form-group col-md-2">
-                                                    <label>Drive</label>
-                                                    <select className="form-control" value={formData.driveType || ''} onChange={(e) => setFormData({ ...formData, driveType: e.target.value })}>
-                                                        <option value="FWD">FWD</option>
-                                                        <option value="RWD">RWD</option>
-                                                        <option value="AWD">AWD</option>
-                                                        <option value="4WD">4WD</option>
-                                                    </select>
-                                                </div>
+                                            <div className="form-group col-md-6">
+                                                <label>Model</label>
+                                                <select className="form-control" value={formData.carModelId} onChange={(e) => setFormData({ ...formData, carModelId: e.target.value })}>
+                                                    <option value="">Select model</option>
+                                                    {carModelsByBrand.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}
+                                                </select>
                                             </div>
-
-                                            <div className="row">
-                                                <div className="form-group col-md-4">
-                                                    <label>Engine</label>
-                                                    <input className="form-control" value={formData.engine || ''} onChange={(e) => setFormData({ ...formData, engine: e.target.value })} />
-                                                </div>
-                                                <div className="form-group col-md-4">
-                                                    <label>VIN</label>
-                                                    <input className="form-control" value={formData.vin || ''} onChange={(e) => setFormData({ ...formData, vin: e.target.value })} />
-                                                </div>
-                                                <div className="form-group col-md-4">
-                                                    <label>License Plate</label>
-                                                    <input className="form-control" value={formData.licensePlate || ''} onChange={(e) => setFormData({ ...formData, licensePlate: e.target.value })} />
-                                                </div>
-                                            </div>
-                                        </>
+                                        </div>
                                     )}
 
                                     <div className="form-group">

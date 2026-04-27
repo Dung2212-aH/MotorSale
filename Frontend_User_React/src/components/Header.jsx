@@ -176,15 +176,18 @@ function Header() {
               </div>
 
               <div className="flex items-center gap-2">
-                {socialLinks.map((item) => (
-                  <a
-                    key={item.label + item.className}
-                    className={`grid h-8 w-8 place-items-center rounded-full border-2 border-white/90 text-lg font-bold text-white transition duration-300 hover:-translate-y-1 hover:scale-105 ${item.className}`}
-                    href={item.href}
-                  >
-                    {item.label}
-                  </a>
-                ))}
+                {socialLinks.map((item, index) => {
+                  const Icon = item.icon;
+                  return (
+                    <a
+                      key={index}
+                      className={`grid h-8 w-8 place-items-center rounded-full border-2 border-white/90 text-lg font-bold text-white transition duration-300 hover:-translate-y-1 hover:scale-105 ${item.className}`}
+                      href={item.href}
+                    >
+                      {Icon && <Icon />}
+                    </a>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -262,15 +265,17 @@ function Header() {
             </nav>
 
             <div className="flex shrink-0 items-center gap-3">
-              <Link className="group relative inline-grid h-11 w-11 place-items-center rounded-full text-[#111] transition duration-300 hover:bg-zinc-100 hover:text-[#d71920]" to="/products" aria-label="Tìm kiếm">
-                <IconSearch />
-              </Link>
               <Link className="group relative inline-grid h-11 w-11 place-items-center rounded-full text-[#111] transition duration-300 hover:bg-zinc-100 hover:text-[#d71920]" to="/" aria-label="Yêu thích">
                 <IconHeart />
                 <span className="absolute right-0 top-1 grid h-[18px] w-[18px] place-items-center rounded-full bg-[#d71920] text-[11px] font-extrabold text-white">
                   0
                 </span>
               </Link>
+              {currentUser && (
+                <Link className="group relative inline-grid h-11 w-11 place-items-center rounded-full text-[#111] transition duration-300 hover:bg-zinc-100 hover:text-[#d71920]" to="/orders" aria-label="Đơn hàng">
+                  <svg viewBox="0 0 24 24" aria-hidden="true" className="h-7 w-7"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><path d="M9 14l2 2 4-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                </Link>
+              )}
               <Link className="group relative inline-grid h-11 w-11 place-items-center rounded-full text-[#111] transition duration-300 hover:bg-zinc-100 hover:text-[#d71920]" to="/cart" aria-label="Giỏ hàng">
                 <IconBag />
                 <span className="absolute right-0 top-1 grid h-[18px] w-[18px] place-items-center rounded-full bg-[#d71920] text-[11px] font-extrabold text-white">

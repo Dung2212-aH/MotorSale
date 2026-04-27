@@ -26,12 +26,21 @@ namespace BaseCore.Repository
         public DbSet<Order> Orders => Set<Order>();
         public DbSet<OrderDetail> OrderDetails => Set<OrderDetail>();
         public DbSet<Payment> Payments => Set<Payment>();
+        public DbSet<PaymentRefund> PaymentRefunds => Set<PaymentRefund>();
         public DbSet<Voucher> Vouchers => Set<Voucher>();
         public DbSet<OrderVoucher> OrderVouchers => Set<OrderVoucher>();
         public DbSet<ContactRequest> ContactRequests => Set<ContactRequest>();
         public DbSet<BlogPost> BlogPosts => Set<BlogPost>();
         public DbSet<Faq> Faqs => Set<Faq>();
         public DbSet<ProductReview> ProductReviews => Set<ProductReview>();
+        public DbSet<SystemRole> SystemRoles => Set<SystemRole>();
+        public DbSet<UserRoleAssignment> UserRoleAssignments => Set<UserRoleAssignment>();
+        public DbSet<InventoryHold> InventoryHolds => Set<InventoryHold>();
+        public DbSet<InstallmentPlan> InstallmentPlans => Set<InstallmentPlan>();
+        public DbSet<PartCompatibility> PartCompatibilities => Set<PartCompatibility>();
+        public DbSet<VoucherCategory> VoucherCategories => Set<VoucherCategory>();
+        public DbSet<VoucherBrand> VoucherBrands => Set<VoucherBrand>();
+        public DbSet<VoucherProduct> VoucherProducts => Set<VoucherProduct>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -41,7 +50,9 @@ namespace BaseCore.Repository
             ConfigureCatalog(modelBuilder);
             ConfigureShopping(modelBuilder);
             ConfigureContent(modelBuilder);
-            SeedData(modelBuilder);
+            ConfigureRoles(modelBuilder);
+            ConfigureInventoryAndInstallments(modelBuilder);
+        
         }
 
         private static void ConfigureUsers(ModelBuilder modelBuilder)
@@ -58,6 +69,7 @@ namespace BaseCore.Repository
                 entity.Property(e => e.IsActive)
                     .HasColumnName("TrangThai")
                     .HasMaxLength(20)
+                    .IsUnicode(false)
                     .HasConversion(v => v ? "Active" : "Inactive", v => v == "Active");
                 entity.Property(e => e.Created).HasColumnName("NgayTao");
                 entity.Ignore(e => e.UserName);
@@ -135,9 +147,9 @@ namespace BaseCore.Repository
                 entity.Property(e => e.Name).HasColumnName("TenShowroom").HasMaxLength(180).IsRequired();
                 entity.Property(e => e.Slug).HasColumnName("Slug").HasMaxLength(220).IsRequired();
                 entity.Property(e => e.AddressLine).HasColumnName("DiaChi").HasMaxLength(255).IsRequired();
-                entity.Property(e => e.Ward).HasColumnName("PhuongXa").HasMaxLength(100);
-                entity.Property(e => e.District).HasColumnName("QuanHuyen").HasMaxLength(100);
-                entity.Property(e => e.Province).HasColumnName("TinhThanh").HasMaxLength(100).IsRequired();
+                entity.Ignore(e => e.Ward);
+                entity.Ignore(e => e.District);
+                entity.Ignore(e => e.Province);
                 entity.Property(e => e.PhoneNumber).HasColumnName("SoDienThoai").HasMaxLength(20);
                 entity.Property(e => e.Email).HasColumnName("Email").HasMaxLength(255);
                 entity.Property(e => e.OpeningHours).HasColumnName("GioMoCua").HasMaxLength(255);
@@ -145,12 +157,11 @@ namespace BaseCore.Repository
                 entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
                 entity.Property(e => e.UpdatedAt).HasColumnName("NgayCapNhat");
                 entity.HasIndex(e => e.Slug).IsUnique();
-                entity.HasIndex(e => new { e.Province, e.District, e.IsActive });
             });
 
             modelBuilder.Entity<Product>(entity =>
             {
-                entity.ToTable("SANPHAM");
+                entity.ToTable("SANPHAM", tb => tb.HasTrigger("trg_SANPHAM_Validate_HangXe_DongXe"));
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("MaSanPham");
                 entity.Property(e => e.ProductCode).HasColumnName("MaSanPhamKinhDoanh").HasMaxLength(50).IsRequired();
@@ -160,7 +171,7 @@ namespace BaseCore.Repository
                 entity.Property(e => e.BrandId).HasColumnName("MaHangXe");
                 entity.Property(e => e.CarModelId).HasColumnName("MaDongXe");
                 entity.Property(e => e.ShowroomId).HasColumnName("MaShowroom");
-                entity.Property(e => e.ProductType).HasColumnName("LoaiSanPham").HasMaxLength(20).IsRequired();
+                entity.Property(e => e.ProductType).HasColumnName("LoaiSanPham").HasMaxLength(20).IsUnicode(false).IsRequired();
                 entity.Property(e => e.ShortDescription).HasColumnName("MoTaNgan").HasMaxLength(500);
                 entity.Property(e => e.Description).HasColumnName("MoTa");
                 entity.Property(e => e.BasePrice).HasColumnName("GiaGoc").HasPrecision(18, 2);
@@ -168,26 +179,39 @@ namespace BaseCore.Repository
                 entity.Property(e => e.StockQuantity).HasColumnName("SoLuongTon");
                 entity.Property(e => e.MainImageUrl).HasColumnName("AnhChinhUrl").HasMaxLength(500);
                 entity.Property(e => e.IsActive).HasColumnName("DangHoatDong");
-                entity.Property(e => e.Condition).HasColumnName("TinhTrangXe").HasMaxLength(20);
-                entity.Property(e => e.Year).HasColumnName("NamSanXuat").HasConversion<short?>();
-                entity.Property(e => e.Mileage).HasColumnName("SoKm");
-                entity.Property(e => e.ExteriorColor).HasColumnName("MauNgoaiThat").HasMaxLength(80);
-                entity.Property(e => e.InteriorColor).HasColumnName("MauNoiThat").HasMaxLength(80);
-                entity.Property(e => e.Seats).HasColumnName("SoChoNgoi").HasConversion<byte?>();
-                entity.Property(e => e.Transmission).HasColumnName("HopSo").HasMaxLength(30);
-                entity.Property(e => e.FuelType).HasColumnName("NhienLieu").HasMaxLength(30);
-                entity.Property(e => e.Engine).HasColumnName("DongCo").HasMaxLength(100);
-                entity.Property(e => e.DriveType).HasColumnName("DanDong").HasMaxLength(30);
-                entity.Property(e => e.Vin).HasColumnName("VIN").HasMaxLength(50);
-                entity.Property(e => e.LicensePlate).HasColumnName("BienSo").HasMaxLength(30);
-                entity.Property(e => e.Status).HasColumnName("TrangThaiSanPham").HasMaxLength(20).IsRequired();
+                entity.Property(e => e.MainColor).HasColumnName("MauSacChinh").HasMaxLength(80);
+                entity.Property(e => e.MotorcycleType).HasColumnName("LoaiXeMay").HasMaxLength(50);
+                entity.Property(e => e.EngineCapacity).HasColumnName("DungTichXiLanh");
+                entity.Property(e => e.Power).HasColumnName("CongSuat").HasMaxLength(50);
+                entity.Property(e => e.Torque).HasColumnName("MoMenXoan").HasMaxLength(50);
+                entity.Property(e => e.FuelTankCapacity).HasColumnName("DungTichBinhXang").HasPrecision(6, 2);
+                entity.Property(e => e.FrontBrake).HasColumnName("PhanhTruoc").HasMaxLength(80);
+                entity.Property(e => e.RearBrake).HasColumnName("PhanhSau").HasMaxLength(80);
+                entity.Property(e => e.HasAbs).HasColumnName("CoABS");
+                entity.Property(e => e.Weight).HasColumnName("TrongLuong").HasPrecision(8, 2);
+                entity.Property(e => e.SeatHeight).HasColumnName("ChieuCaoYen");
+                entity.Property(e => e.Origin).HasColumnName("XuatXu").HasMaxLength(100);
+                entity.Property(e => e.WarrantyMonths).HasColumnName("BaoHanhThang");
+                entity.Ignore(e => e.Condition);
+                entity.Ignore(e => e.Year);
+                entity.Ignore(e => e.Mileage);
+                entity.Ignore(e => e.ExteriorColor);
+                entity.Ignore(e => e.InteriorColor);
+                entity.Ignore(e => e.Seats);
+                entity.Ignore(e => e.Transmission);
+                entity.Ignore(e => e.FuelType);
+                entity.Ignore(e => e.Engine);
+                entity.Ignore(e => e.DriveType);
+                entity.Ignore(e => e.Vin);
+                entity.Ignore(e => e.LicensePlate);
+                entity.Property(e => e.Status).HasColumnName("TrangThaiSanPham").HasMaxLength(20).IsUnicode(false).IsRequired();
                 entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
                 entity.Property(e => e.UpdatedAt).HasColumnName("NgayCapNhat");
                 entity.HasIndex(e => e.ProductCode).IsUnique();
                 entity.HasIndex(e => e.Slug).IsUnique();
                 entity.HasIndex(e => new { e.CategoryId, e.ProductType, e.IsActive, e.Status });
                 entity.HasIndex(e => new { e.BrandId, e.CarModelId, e.IsActive });
-                entity.HasIndex(e => new { e.Condition, e.Year, e.FuelType, e.Transmission, e.ExteriorColor, e.ShowroomId });
+                entity.HasIndex(e => new { e.MotorcycleType, e.BrandId, e.CarModelId, e.IsActive });
                 entity.HasOne(e => e.Category)
                     .WithMany()
                     .HasForeignKey(e => e.CategoryId)
@@ -205,18 +229,18 @@ namespace BaseCore.Repository
                     .HasForeignKey(e => e.ShowroomId)
                     .OnDelete(DeleteBehavior.Restrict);
                 entity.HasMany(e => e.Variants)
-                    .WithOne()
+                    .WithOne(e => e.Product)
                     .HasForeignKey(e => e.ProductId)
                     .OnDelete(DeleteBehavior.Cascade);
                 entity.HasMany(e => e.Images)
-                    .WithOne()
+                    .WithOne(e => e.Product)
                     .HasForeignKey(e => e.ProductId)
                     .OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<ProductVariant>(entity =>
             {
-                entity.ToTable("BIENSANPHAM");
+                entity.ToTable("BIENSANPHAM", tb => tb.HasTrigger("trg_BIENSANPHAM_Sync_SoLuongTon_SANPHAM"));
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("MaBienSanPham");
                 entity.Property(e => e.ProductId).HasColumnName("MaSanPham");
@@ -224,29 +248,32 @@ namespace BaseCore.Repository
                 entity.Property(e => e.Sku).HasColumnName("SKU").HasMaxLength(80).IsRequired();
                 entity.Property(e => e.PriceOverride).HasColumnName("GiaGhiDe").HasPrecision(18, 2);
                 entity.Property(e => e.StockQuantity).HasColumnName("SoLuongTon");
-                entity.Property(e => e.Status).HasColumnName("TrangThai").HasMaxLength(20).IsRequired();
+                entity.Property(e => e.Status).HasColumnName("TrangThai").HasMaxLength(20).IsUnicode(false).IsRequired();
                 entity.Property(e => e.Version).HasColumnName("PhienBan").HasMaxLength(100);
-                entity.Property(e => e.ExteriorColor).HasColumnName("MauNgoaiThat").HasMaxLength(80);
-                entity.Property(e => e.InteriorColor).HasColumnName("MauNoiThat").HasMaxLength(80);
+                entity.Property(e => e.Color).HasColumnName("MauSac").HasMaxLength(80);
+                entity.Ignore(e => e.ExteriorColor);
+                entity.Ignore(e => e.InteriorColor);
                 entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
                 entity.Property(e => e.UpdatedAt).HasColumnName("NgayCapNhat");
                 entity.HasIndex(e => e.Sku).IsUnique();
                 entity.HasIndex(e => new { e.ProductId, e.Status });
+                entity.HasOne(e => e.Product).WithMany(e => e.Variants).HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<ProductImage>(entity =>
             {
-                entity.ToTable("ANHSANPHAM");
+                entity.ToTable("ANHSANPHAM", tb => tb.HasTrigger("trg_ANHSANPHAM_Validate_MaBienSanPham"));
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("MaAnhSanPham");
                 entity.Property(e => e.ProductId).HasColumnName("MaSanPham");
+                entity.Property(e => e.ProductVariantId).HasColumnName("MaBienSanPham");
                 entity.Property(e => e.ImageUrl).HasColumnName("UrlAnh").HasMaxLength(500).IsRequired();
                 entity.Property(e => e.AltText).HasColumnName("AltText").HasMaxLength(255);
                 entity.Property(e => e.IsPrimary).HasColumnName("LaAnhChinh");
                 entity.Property(e => e.SortOrder).HasColumnName("ThuTuHienThi");
                 entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
-                entity.HasIndex(e => new { e.ProductId, e.SortOrder });
-                entity.HasIndex(e => e.ProductId).IsUnique().HasFilter("[LaAnhChinh] = 1");
+                entity.HasIndex(e => new { e.ProductId, e.ProductVariantId, e.SortOrder });
+                entity.HasOne(e => e.ProductVariant).WithMany(e => e.Images).HasForeignKey(e => e.ProductVariantId).OnDelete(DeleteBehavior.Restrict);
             });
         }
 
@@ -269,7 +296,7 @@ namespace BaseCore.Repository
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("MaGioHang");
                 entity.Property(e => e.UserId).HasColumnName("MaNguoiDung").IsRequired();
-                entity.Property(e => e.Status).HasColumnName("TrangThai").HasMaxLength(20).IsRequired();
+                entity.Property(e => e.Status).HasColumnName("TrangThai").HasMaxLength(20).IsUnicode(false).IsRequired();
                 entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
                 entity.Property(e => e.UpdatedAt).HasColumnName("NgayCapNhat");
                 entity.HasIndex(e => e.UserId).IsUnique().HasFilter("[TrangThai] = 'Active'");
@@ -278,7 +305,7 @@ namespace BaseCore.Repository
 
             modelBuilder.Entity<CartItem>(entity =>
             {
-                entity.ToTable("CHITIET_GIOHANG");
+                entity.ToTable("CHITIET_GIOHANG", tb => tb.HasTrigger("trg_CHITIET_GIOHANG_Validate_MaBienSanPham"));
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("MaChiTietGioHang");
                 entity.Property(e => e.CartId).HasColumnName("MaGioHang");
@@ -308,29 +335,43 @@ namespace BaseCore.Repository
                 entity.Property(e => e.ShippingPhoneNumber).HasColumnName("SoDienThoaiNhanHang").HasMaxLength(20).IsRequired();
                 entity.Property(e => e.ShippingEmail).HasColumnName("EmailNhanHang").HasMaxLength(255);
                 entity.Property(e => e.ShippingAddressLine).HasColumnName("DiaChiNhanHang").HasMaxLength(255).IsRequired();
-                entity.Property(e => e.ShippingWard).HasColumnName("PhuongXa").HasMaxLength(100);
-                entity.Property(e => e.ShippingDistrict).HasColumnName("QuanHuyen").HasMaxLength(100);
-                entity.Property(e => e.ShippingProvince).HasColumnName("TinhThanh").HasMaxLength(100).IsRequired();
                 entity.Property(e => e.Subtotal).HasColumnName("TongTienHang").HasPrecision(18, 2);
                 entity.Property(e => e.DiscountAmount).HasColumnName("TienGiam").HasPrecision(18, 2);
                 entity.Property(e => e.ShippingFee).HasColumnName("PhiVanChuyen").HasPrecision(18, 2);
                 entity.Property(e => e.TotalAmount).HasColumnName("TongThanhToan").HasPrecision(18, 2);
-                entity.Property(e => e.OrderStatus).HasColumnName("TrangThaiDonHang").HasMaxLength(20).IsRequired();
-                entity.Property(e => e.PaymentStatus).HasColumnName("TrangThaiThanhToan").HasMaxLength(20).IsRequired();
+                entity.Property(e => e.OrderStatus).HasColumnName("TrangThaiDonHang").HasMaxLength(20).IsUnicode(false).IsRequired();
+                entity.Property(e => e.PaymentStatus).HasColumnName("TrangThaiThanhToan").HasMaxLength(20).IsUnicode(false).IsRequired();
                 entity.Property(e => e.Note).HasColumnName("GhiChu").HasMaxLength(1000);
                 entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
                 entity.Property(e => e.UpdatedAt).HasColumnName("NgayCapNhat");
+                entity.Ignore(e => e.ShippingWard);
+                entity.Ignore(e => e.ShippingDistrict);
+                entity.Ignore(e => e.ShippingProvince);
+                entity.Ignore(e => e.CheckoutExpiresAt);
+                entity.Property(e => e.PaidSuccessfullyAt).HasColumnName("NgayThanhToanThanhCong");
+                entity.Property(e => e.CancelledAt).HasColumnName("NgayHuyDon");
+                entity.Property(e => e.CancelReason).HasColumnName("LyDoHuyDon").HasMaxLength(500);
+                entity.Property(e => e.CartId).HasColumnName("MaGioHang");
+                entity.Property(e => e.ReceivingMethod).HasColumnName("PhuongThucNhanHang").HasMaxLength(30).IsUnicode(false).IsRequired();
+                entity.Property(e => e.ShippingStatus).HasColumnName("TrangThaiVanChuyen").HasMaxLength(30).IsUnicode(false).IsRequired();
+                entity.Property(e => e.OrderType).HasColumnName("LoaiDonHang").HasMaxLength(20).IsUnicode(false).IsRequired();
+                entity.Property(e => e.DepositAmount).HasColumnName("TienDatCoc").HasPrecision(18, 2);
+                entity.Property(e => e.RemainingAmount).HasColumnName("SoTienConLai").HasPrecision(18, 2);
+                entity.Property(e => e.PickupAppointmentAt).HasColumnName("NgayHenNhanXe");
+                entity.Property(e => e.FulfillmentNote).HasColumnName("GhiChuGiaoNhan").HasMaxLength(500);
                 entity.HasIndex(e => e.OrderCode).IsUnique();
                 entity.HasIndex(e => new { e.UserId, e.CreatedAt });
                 entity.HasIndex(e => new { e.OrderStatus, e.CreatedAt });
                 entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasOne(e => e.Showroom).WithMany().HasForeignKey(e => e.ShowroomId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Cart).WithMany().HasForeignKey(e => e.CartId).OnDelete(DeleteBehavior.Restrict);
                 entity.HasMany(e => e.OrderDetails).WithOne(e => e.Order).HasForeignKey(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasMany(e => e.Payments).WithOne(e => e.Order).HasForeignKey(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
             });
 
             modelBuilder.Entity<OrderDetail>(entity =>
             {
-                entity.ToTable("CHITIET_DONHANG");
+                entity.ToTable("CHITIET_DONHANG", tb => tb.HasTrigger("trg_CHITIET_DONHANG_Validate_MaBienSanPham"));
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("MaChiTietDonHang");
                 entity.Property(e => e.OrderId).HasColumnName("MaDonHang");
@@ -353,14 +394,40 @@ namespace BaseCore.Repository
                 entity.Property(e => e.PaymentCode).HasColumnName("MaThanhToanKinhDoanh").HasMaxLength(50).IsRequired();
                 entity.Property(e => e.OrderId).HasColumnName("MaDonHang");
                 entity.Property(e => e.Amount).HasColumnName("SoTien").HasPrecision(18, 2);
-                entity.Property(e => e.PaymentMethod).HasColumnName("PhuongThuc").HasMaxLength(30).IsRequired();
-                entity.Property(e => e.PaymentStatus).HasColumnName("TrangThai").HasMaxLength(20).IsRequired();
+                entity.Property(e => e.PaymentMethod).HasColumnName("PhuongThuc").HasMaxLength(30).IsUnicode(false).IsRequired();
+                entity.Property(e => e.PaymentStatus).HasColumnName("TrangThai").HasMaxLength(20).IsUnicode(false).IsRequired();
                 entity.Property(e => e.TransactionRef).HasColumnName("MaGiaoDich").HasMaxLength(120);
                 entity.Property(e => e.PaidAt).HasColumnName("DaThanhToanLuc");
                 entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
+                entity.Property(e => e.PaymentType).HasColumnName("LoaiThanhToan").HasMaxLength(30).IsUnicode(false).IsRequired();
+                entity.Property(e => e.RefundedAmount).HasColumnName("SoTienHoan").HasPrecision(18, 2);
+                entity.Property(e => e.TransferContent).HasColumnName("NoiDungChuyenKhoan").HasMaxLength(500);
+                entity.Property(e => e.BankCode).HasColumnName("MaNganHang").HasMaxLength(50);
+                entity.Ignore(e => e.RefundTransactionRef);
+                entity.Ignore(e => e.RefundedAt);
+                entity.Property(e => e.CancelReason).HasColumnName("LyDoHuy").HasMaxLength(500);
+                entity.Property(e => e.CancelledAt).HasColumnName("NgayHuy");
+                entity.Property(e => e.RawResponse).HasColumnName("ResponseRaw");
                 entity.HasIndex(e => e.PaymentCode).IsUnique();
                 entity.HasIndex(e => new { e.OrderId, e.PaymentStatus });
-                entity.HasOne(e => e.Order).WithMany().HasForeignKey(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Order).WithMany(e => e.Payments).HasForeignKey(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<PaymentRefund>(entity =>
+            {
+                entity.ToTable("THANHTOAN_HOANTIEN");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("MaHoanTien");
+                entity.Property(e => e.PaymentId).HasColumnName("MaThanhToan");
+                entity.Property(e => e.OrderId).HasColumnName("MaDonHang");
+                entity.Property(e => e.Amount).HasColumnName("SoTienHoan").HasPrecision(18, 2);
+                entity.Property(e => e.RefundTransactionRef).HasColumnName("MaGiaoDichHoanTien").HasMaxLength(120);
+                entity.Property(e => e.Reason).HasColumnName("LyDo").HasMaxLength(500);
+                entity.Property(e => e.Status).HasColumnName("TrangThai").HasMaxLength(20).IsUnicode(false).IsRequired();
+                entity.Property(e => e.RawResponse).HasColumnName("ResponseRaw");
+                entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
+                entity.HasOne(e => e.Payment).WithMany(e => e.Refunds).HasForeignKey(e => e.PaymentId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Order).WithMany().HasForeignKey(e => e.OrderId).OnDelete(DeleteBehavior.Restrict);
             });
 
             modelBuilder.Entity<Voucher>(entity =>
@@ -369,7 +436,7 @@ namespace BaseCore.Repository
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.Id).HasColumnName("MaVoucher");
                 entity.Property(e => e.Code).HasColumnName("MaVoucherCode").HasMaxLength(50).IsRequired();
-                entity.Property(e => e.DiscountType).HasColumnName("LoaiGiamGia").HasMaxLength(20).IsRequired();
+                entity.Property(e => e.DiscountType).HasColumnName("LoaiGiamGia").HasMaxLength(20).IsUnicode(false).IsRequired();
                 entity.Property(e => e.DiscountValue).HasColumnName("GiaTriGiam").HasPrecision(18, 2);
                 entity.Property(e => e.MinOrderValue).HasColumnName("GiaTriDonToiThieu").HasPrecision(18, 2);
                 entity.Property(e => e.MaxDiscountValue).HasColumnName("GiaTriGiamToiDa").HasPrecision(18, 2);
@@ -379,6 +446,10 @@ namespace BaseCore.Repository
                 entity.Property(e => e.UsedCount).HasColumnName("SoLanDaDung");
                 entity.Property(e => e.IsActive).HasColumnName("DangHoatDong");
                 entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
+                entity.Property(e => e.Description).HasColumnName("MoTa").HasMaxLength(500);
+                entity.Property(e => e.MaxUsagePerUser).HasColumnName("SoLanToiDaMoiNguoiDung");
+                entity.Property(e => e.Scope).HasColumnName("PhamViApDung").HasMaxLength(20).IsUnicode(false).IsRequired();
+                entity.Property(e => e.UpdatedAt).HasColumnName("NgayCapNhat");
                 entity.HasIndex(e => e.Code).IsUnique();
                 entity.HasIndex(e => new { e.IsActive, e.StartAt, e.EndAt });
             });
@@ -392,6 +463,8 @@ namespace BaseCore.Repository
                 entity.Property(e => e.VoucherCodeSnapshot).HasColumnName("MaVoucherCodeSnapshot").HasMaxLength(50).IsRequired();
                 entity.Property(e => e.DiscountAmount).HasColumnName("SoTienGiam").HasPrecision(18, 2);
                 entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
+                entity.Property(e => e.DiscountTypeSnapshot).HasColumnName("LoaiGiamGiaSnapshot").HasMaxLength(20).IsUnicode(false);
+                entity.Property(e => e.DiscountValueSnapshot).HasColumnName("GiaTriGiamSnapshot").HasPrecision(18, 2);
                 entity.HasOne(e => e.Order).WithMany().HasForeignKey(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
                 entity.HasOne(e => e.Voucher).WithMany().HasForeignKey(e => e.VoucherId).OnDelete(DeleteBehavior.Restrict);
             });
@@ -409,10 +482,10 @@ namespace BaseCore.Repository
                 entity.Property(e => e.Email).HasColumnName("Email").HasMaxLength(255);
                 entity.Property(e => e.Subject).HasColumnName("TieuDe").HasMaxLength(255);
                 entity.Property(e => e.Message).HasColumnName("NoiDung").IsRequired();
-                entity.Property(e => e.InquiryType).HasColumnName("LoaiYeuCau").HasMaxLength(30).IsRequired();
+                entity.Property(e => e.InquiryType).HasColumnName("LoaiYeuCau").HasMaxLength(30).IsUnicode(false).IsRequired();
                 entity.Property(e => e.ProductId).HasColumnName("MaSanPham");
                 entity.Property(e => e.ShowroomId).HasColumnName("MaShowroom");
-                entity.Property(e => e.Status).HasColumnName("TrangThai").HasMaxLength(20).IsRequired();
+                entity.Property(e => e.Status).HasColumnName("TrangThai").HasMaxLength(20).IsUnicode(false).IsRequired();
                 entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
                 entity.Property(e => e.ProcessedAt).HasColumnName("DaXuLyLuc");
                 entity.Property(e => e.ProcessedByUserId).HasColumnName("MaNguoiXuLy");
@@ -435,7 +508,7 @@ namespace BaseCore.Repository
                 entity.Property(e => e.Category).HasColumnName("DanhMuc").HasMaxLength(100);
                 entity.Property(e => e.AuthorUserId).HasColumnName("MaTacGia");
                 entity.Property(e => e.PublishedAt).HasColumnName("XuatBanLuc");
-                entity.Property(e => e.Status).HasColumnName("TrangThai").HasMaxLength(20).IsRequired();
+                entity.Property(e => e.Status).HasColumnName("TrangThai").HasMaxLength(20).IsUnicode(false).IsRequired();
                 entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
                 entity.Property(e => e.UpdatedAt).HasColumnName("NgayCapNhat");
                 entity.HasIndex(e => e.Slug).IsUnique();
@@ -469,7 +542,7 @@ namespace BaseCore.Repository
                 entity.Property(e => e.Rating).HasColumnName("Diem");
                 entity.Property(e => e.Title).HasColumnName("TieuDe").HasMaxLength(255);
                 entity.Property(e => e.Content).HasColumnName("NoiDung");
-                entity.Property(e => e.Status).HasColumnName("TrangThai").HasMaxLength(20).IsRequired();
+                entity.Property(e => e.Status).HasColumnName("TrangThai").HasMaxLength(20).IsUnicode(false).IsRequired();
                 entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
                 entity.HasIndex(e => new { e.ProductId, e.Status, e.CreatedAt });
                 entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
@@ -478,41 +551,172 @@ namespace BaseCore.Repository
             });
         }
 
+        private static void ConfigureRoles(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<SystemRole>(entity =>
+            {
+                entity.ToTable("VAITRO");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("MaVaiTro").ValueGeneratedOnAdd();
+                entity.Property(e => e.Name).HasColumnName("TenVaiTro").HasMaxLength(30).IsUnicode(false).IsRequired();
+                entity.Property(e => e.Description).HasColumnName("MoTa").HasMaxLength(255);
+                entity.HasIndex(e => e.Name).IsUnique();
+            });
+
+            modelBuilder.Entity<UserRoleAssignment>(entity =>
+            {
+                entity.ToTable("NGUOIDUNG_VAITRO");
+                entity.HasKey(e => new { e.UserId, e.RoleId });
+                entity.Property(e => e.UserId).HasColumnName("MaNguoiDung");
+                entity.Property(e => e.RoleId).HasColumnName("MaVaiTro");
+                entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
+                entity.HasOne(e => e.User).WithMany().HasForeignKey(e => e.UserId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Role).WithMany(e => e.UserAssignments).HasForeignKey(e => e.RoleId).OnDelete(DeleteBehavior.Cascade);
+            });
+        }
+
+        private static void ConfigureInventoryAndInstallments(ModelBuilder modelBuilder)
+        {
+            modelBuilder.Entity<InventoryHold>(entity =>
+            {
+                entity.ToTable("TONKHO_GIUCHO", tb => tb.HasTrigger("trg_TONKHO_GIUCHO_Validate_MaBienSanPham"));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("MaGiuCho");
+                entity.Property(e => e.OrderId).HasColumnName("MaDonHang");
+                entity.Property(e => e.OrderDetailId).HasColumnName("MaChiTietDonHang");
+                entity.Property(e => e.ProductId).HasColumnName("MaSanPham");
+                entity.Property(e => e.ProductVariantId).HasColumnName("MaBienSanPham");
+                entity.Property(e => e.Quantity).HasColumnName("SoLuong");
+                entity.Property(e => e.Status).HasColumnName("TrangThai").HasMaxLength(20).IsUnicode(false).IsRequired();
+                entity.Property(e => e.ExpiresAt).HasColumnName("HetHanLuc");
+                entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
+                entity.Property(e => e.UpdatedAt).HasColumnName("NgayCapNhat");
+                entity.Property(e => e.Note).HasColumnName("GhiChu").HasMaxLength(500);
+                entity.HasIndex(e => new { e.OrderDetailId, e.Status }).IsUnique().HasFilter("[MaChiTietDonHang] IS NOT NULL AND [TrangThai] = 'Active'");
+                entity.HasIndex(e => new { e.ProductId, e.ProductVariantId, e.Status, e.ExpiresAt });
+                entity.HasOne(e => e.Order).WithMany(e => e.InventoryHolds).HasForeignKey(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.OrderDetail).WithMany().HasForeignKey(e => e.OrderDetailId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.ProductVariant).WithMany().HasForeignKey(e => e.ProductVariantId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<InstallmentPlan>(entity =>
+            {
+                entity.ToTable("TRA_GOP");
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("MaTraGop");
+                entity.Property(e => e.OrderId).HasColumnName("MaDonHang");
+                entity.Property(e => e.DownPaymentAmount).HasColumnName("SoTienTraTruoc").HasPrecision(18, 2);
+                entity.Property(e => e.FinancedAmount).HasColumnName("SoTienTraGop").HasPrecision(18, 2);
+                entity.Property(e => e.Months).HasColumnName("SoThang");
+                entity.Property(e => e.MonthlyInterestRate).HasColumnName("LaiSuatThang").HasPrecision(5, 2);
+                entity.Property(e => e.MonthlyPaymentAmount).HasColumnName("SoTienMoiThang").HasPrecision(18, 2);
+                entity.Property(e => e.PaidPeriods).HasColumnName("SoKyDaTra");
+                entity.Property(e => e.BuyerFullName).HasColumnName("HoTenNguoiMua").HasMaxLength(150);
+                entity.Property(e => e.PhoneNumber).HasColumnName("SoDienThoai").HasMaxLength(20);
+                entity.Property(e => e.CitizenId).HasColumnName("CCCD").HasMaxLength(20);
+                entity.Property(e => e.Address).HasColumnName("DiaChi").HasMaxLength(255);
+                entity.Property(e => e.FinanceCompany).HasColumnName("DonViTaiChinh").HasMaxLength(150);
+                entity.Property(e => e.StartDate).HasColumnName("NgayBatDau").HasColumnType("date");
+                entity.Property(e => e.EndDate).HasColumnName("NgayKetThuc").HasColumnType("date");
+                entity.Property(e => e.Status).HasColumnName("TrangThai").HasMaxLength(30).IsUnicode(false).IsRequired();
+                entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
+                entity.Property(e => e.UpdatedAt).HasColumnName("NgayCapNhat");
+                entity.Property(e => e.Note).HasColumnName("GhiChu").HasMaxLength(500);
+                entity.HasIndex(e => e.OrderId).IsUnique();
+                entity.HasOne(e => e.Order).WithMany().HasForeignKey(e => e.OrderId).OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<PartCompatibility>(entity =>
+            {
+                entity.ToTable("PHUTUNG_TUONGTHICH", tb => tb.HasTrigger("trg_PHUTUNG_TUONGTHICH_Validate"));
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Id).HasColumnName("MaTuongThich");
+                entity.Property(e => e.PartProductId).HasColumnName("MaPhuTung");
+                entity.Property(e => e.BrandId).HasColumnName("MaHangXe");
+                entity.Property(e => e.CarModelId).HasColumnName("MaDongXe");
+                entity.Property(e => e.FromYear).HasColumnName("NamTu");
+                entity.Property(e => e.ToYear).HasColumnName("NamDen");
+                entity.Property(e => e.AppliesToAllMotorcycles).HasColumnName("ApDungTatCaXe");
+                entity.Property(e => e.Note).HasColumnName("GhiChu").HasMaxLength(500);
+                entity.Property(e => e.IsActive).HasColumnName("DangHoatDong");
+                entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
+                entity.Property(e => e.UpdatedAt).HasColumnName("NgayCapNhat");
+                entity.HasIndex(e => new { e.PartProductId, e.BrandId, e.CarModelId });
+                entity.HasOne(e => e.PartProduct).WithMany().HasForeignKey(e => e.PartProductId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Brand).WithMany().HasForeignKey(e => e.BrandId).OnDelete(DeleteBehavior.Restrict);
+                entity.HasOne(e => e.CarModel).WithMany().HasForeignKey(e => e.CarModelId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            modelBuilder.Entity<VoucherCategory>(entity =>
+            {
+                entity.ToTable("VOUCHER_DANHMUC");
+                entity.HasKey(e => new { e.VoucherId, e.CategoryId });
+                entity.Property(e => e.VoucherId).HasColumnName("MaVoucher");
+                entity.Property(e => e.CategoryId).HasColumnName("MaDanhMuc");
+                entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
+                entity.HasOne(e => e.Voucher).WithMany(e => e.Categories).HasForeignKey(e => e.VoucherId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Category).WithMany().HasForeignKey(e => e.CategoryId).OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<VoucherBrand>(entity =>
+            {
+                entity.ToTable("VOUCHER_HANGXE");
+                entity.HasKey(e => new { e.VoucherId, e.BrandId });
+                entity.Property(e => e.VoucherId).HasColumnName("MaVoucher");
+                entity.Property(e => e.BrandId).HasColumnName("MaHangXe");
+                entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
+                entity.HasOne(e => e.Voucher).WithMany(e => e.Brands).HasForeignKey(e => e.VoucherId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Brand).WithMany().HasForeignKey(e => e.BrandId).OnDelete(DeleteBehavior.Cascade);
+            });
+
+            modelBuilder.Entity<VoucherProduct>(entity =>
+            {
+                entity.ToTable("VOUCHER_SANPHAM");
+                entity.HasKey(e => new { e.VoucherId, e.ProductId });
+                entity.Property(e => e.VoucherId).HasColumnName("MaVoucher");
+                entity.Property(e => e.ProductId).HasColumnName("MaSanPham");
+                entity.Property(e => e.CreatedAt).HasColumnName("NgayTao");
+                entity.HasOne(e => e.Voucher).WithMany(e => e.Products).HasForeignKey(e => e.VoucherId).OnDelete(DeleteBehavior.Cascade);
+                entity.HasOne(e => e.Product).WithMany().HasForeignKey(e => e.ProductId).OnDelete(DeleteBehavior.Cascade);
+            });
+        }
+
         private static void SeedData(ModelBuilder modelBuilder)
         {
             modelBuilder.Entity<Category>().HasData(
-                new Category { Id = 1, Name = "Cars", Slug = "cars", Description = "New and used cars", SortOrder = 1, IsActive = true },
-                new Category { Id = 2, Name = "Accessories", Slug = "accessories", Description = "Car accessories and parts", SortOrder = 2, IsActive = true },
-                new Category { Id = 3, ParentCategoryId = 1, Name = "Sedan", Slug = "sedan", Description = "Sedan cars", SortOrder = 1, IsActive = true },
-                new Category { Id = 4, ParentCategoryId = 1, Name = "SUV", Slug = "suv", Description = "SUV cars", SortOrder = 2, IsActive = true },
-                new Category { Id = 5, ParentCategoryId = 2, Name = "Interior Accessories", Slug = "interior-accessories", Description = "Interior car accessories", SortOrder = 1, IsActive = true },
-                new Category { Id = 6, ParentCategoryId = 2, Name = "Dash Cameras", Slug = "dash-cameras", Description = "Dash cameras and recording devices", SortOrder = 2, IsActive = true }
+                new Category { Id = 1, Name = "Motorcycles", Slug = "motorcycles", Description = "New and used motorcycles", SortOrder = 1, IsActive = true },
+                new Category { Id = 2, Name = "Accessories", Slug = "accessories", Description = "Motorcycle accessories and parts", SortOrder = 2, IsActive = true },
+                new Category { Id = 3, ParentCategoryId = 1, Name = "Scooter", Slug = "scooter", Description = "Scooter motorcycles", SortOrder = 1, IsActive = true },
+                new Category { Id = 4, ParentCategoryId = 1, Name = "Underbone", Slug = "underbone", Description = "Underbone motorcycles", SortOrder = 2, IsActive = true },
+                new Category { Id = 5, ParentCategoryId = 2, Name = "Helmets", Slug = "helmets", Description = "Safety helmets", SortOrder = 1, IsActive = true },
+                new Category { Id = 6, ParentCategoryId = 2, Name = "Dash Cameras", Slug = "dash-cameras", Description = "Dash cameras for motorcycles", SortOrder = 2, IsActive = true }
             );
 
             modelBuilder.Entity<Brand>().HasData(
-                new Brand { Id = 1, Name = "Toyota", Slug = "toyota", LogoUrl = "/images/brands/toyota.png", IsActive = true },
-                new Brand { Id = 2, Name = "Mazda", Slug = "mazda", LogoUrl = "/images/brands/mazda.png", IsActive = true },
-                new Brand { Id = 3, Name = "Hyundai", Slug = "hyundai", LogoUrl = "/images/brands/hyundai.png", IsActive = true }
+                new Brand { Id = 1, Name = "Honda", Slug = "honda", LogoUrl = "/images/brands/honda.png", IsActive = true },
+                new Brand { Id = 2, Name = "Yamaha", Slug = "yamaha", LogoUrl = "/images/brands/yamaha.png", IsActive = true },
+                new Brand { Id = 3, Name = "Suzuki", Slug = "suzuki", LogoUrl = "/images/brands/suzuki.png", IsActive = true }
             );
 
             modelBuilder.Entity<CarModel>().HasData(
-                new CarModel { Id = 1, BrandId = 1, Name = "Vios", Slug = "toyota-vios", IsActive = true },
-                new CarModel { Id = 2, BrandId = 2, Name = "CX-5", Slug = "mazda-cx-5", IsActive = true },
-                new CarModel { Id = 3, BrandId = 3, Name = "Tucson", Slug = "hyundai-tucson", IsActive = true }
+                new CarModel { Id = 1, BrandId = 1, Name = "Air Blade", Slug = "honda-air-blade", IsActive = true },
+                new CarModel { Id = 2, BrandId = 2, Name = "Exciter", Slug = "yamaha-exciter", IsActive = true },
+                new CarModel { Id = 3, BrandId = 3, Name = "Raider", Slug = "suzuki-raider", IsActive = true }
             );
 
             modelBuilder.Entity<Showroom>().HasData(
                 new Showroom
                 {
                     Id = 1,
-                    Name = "Auto Showroom Quan 7",
-                    Slug = "auto-showroom-quan-7",
+                    Name = "Motorcycle Showroom Quan 7",
+                    Slug = "motor-showroom-quan-7",
                     AddressLine = "123 Nguyen Van Linh",
                     Ward = "Tan Phu",
                     District = "Quan 7",
                     Province = "TP. Ho Chi Minh",
                     PhoneNumber = "0900123456",
-                    Email = "showroom.q7@autoshowroom.vn",
+                    Email = "showroom.q7@motorshowroom.vn",
                     OpeningHours = "08:00 - 20:00",
                     IsActive = true
                 }
@@ -522,117 +726,111 @@ namespace BaseCore.Repository
                 new Product
                 {
                     Id = 1,
-                    ProductCode = "CAR-VIOS-2024",
-                    Name = "Toyota Vios 1.5G 2024",
-                    Slug = "toyota-vios-15g-2024",
+                    ProductCode = "MOTO-AB-2024",
+                    Name = "Honda Air Blade 160 2024",
+                    Slug = "honda-air-blade-160-2024",
                     CategoryId = 3,
                     BrandId = 1,
                     CarModelId = 1,
                     ShowroomId = 1,
-                    ProductType = "Car",
-                    ShortDescription = "New sedan with strong fuel economy for family and service use.",
-                    Description = "Toyota Vios 1.5G 2024, CVT transmission, practical cabin and full safety package.",
-                    BasePrice = 592000000,
-                    SalePrice = 575000000,
-                    StockQuantity = 3,
-                    MainImageUrl = "/images/products/vios-2024-main.jpg",
+                    ProductType = "Motorcycle",
+                    ShortDescription = "New scooter with strong performance and fuel economy.",
+                    Description = "Honda Air Blade 160 2024, practical design and full safety package.",
+                    BasePrice = 57000000,
+                    SalePrice = 55990000,
+                    StockQuantity = 10,
+                    MainImageUrl = "/images/products/air-blade-2024-main.jpg",
                     Condition = "New",
-                    Year = 2024,
-                    Mileage = 0,
-                    ExteriorColor = "Pearl White",
-                    InteriorColor = "Black",
-                    Seats = 5,
-                    Transmission = "CVT",
-                    FuelType = "Gasoline",
-                    Engine = "1.5L",
-                    DriveType = "FWD",
-                    Vin = "VINVIOS20240001",
                     Status = "Available",
-                    IsActive = true
+                    IsActive = true,
+                    MotorcycleType = "Scooter",
+                    EngineCapacity = 160,
+                    MainColor = "Black",
+                    Power = "11.2 kW",
+                    Torque = "14.6 Nm",
+                    FuelTankCapacity = 4.4m,
+                    Weight = 114,
+                    SeatHeight = 775,
+                    WarrantyMonths = 36
                 },
                 new Product
                 {
                     Id = 2,
-                    ProductCode = "CAR-CX5-2022",
-                    Name = "Mazda CX-5 2.0 Premium 2022",
-                    Slug = "mazda-cx-5-20-premium-2022",
+                    ProductCode = "MOTO-EX-2024",
+                    Name = "Yamaha Exciter 155 VVA 2024",
+                    Slug = "yamaha-exciter-155-vva-2024",
                     CategoryId = 4,
                     BrandId = 2,
                     CarModelId = 2,
                     ShowroomId = 1,
-                    ProductType = "Car",
-                    ShortDescription = "Used SUV in good condition with low mileage.",
-                    Description = "Mazda CX-5 2.0 Premium 2022, privately used and well maintained.",
-                    BasePrice = 799000000,
-                    SalePrice = 765000000,
-                    StockQuantity = 1,
-                    MainImageUrl = "/images/products/cx5-2022-main.jpg",
-                    Condition = "Used",
-                    Year = 2022,
-                    Mileage = 28000,
-                    ExteriorColor = "Soul Red",
-                    InteriorColor = "Black",
-                    Seats = 5,
-                    Transmission = "Automatic",
-                    FuelType = "Gasoline",
-                    Engine = "2.0L SkyActiv-G",
-                    DriveType = "FWD",
-                    Vin = "VINCX520220001",
-                    LicensePlate = "51H-123.45",
+                    ProductType = "Motorcycle",
+                    ShortDescription = "Sporty underbone with VVA technology.",
+                    Description = "Yamaha Exciter 155 VVA, sporty design, powerful acceleration.",
+                    BasePrice = 52000000,
+                    SalePrice = 50500000,
+                    StockQuantity = 5,
+                    MainImageUrl = "/images/products/exciter-2024-main.jpg",
+                    Condition = "New",
                     Status = "Available",
-                    IsActive = true
+                    IsActive = true,
+                    MotorcycleType = "Underbone",
+                    EngineCapacity = 155,
+                    MainColor = "Blue",
+                    Weight = 119,
+                    SeatHeight = 795,
+                    WarrantyMonths = 36
                 },
                 new Product
                 {
                     Id = 3,
-                    ProductCode = "ACC-CAM-70MAI-A500S",
-                    Name = "70mai A500S Dash Camera",
-                    Slug = "70mai-a500s-dash-camera",
-                    CategoryId = 6,
+                    ProductCode = "ACC-HELMET-AGV-K3",
+                    Name = "AGV K3 Helmet",
+                    Slug = "agv-k3-helmet",
+                    CategoryId = 5,
                     ProductType = "Accessory",
-                    ShortDescription = "Front and rear dash camera with clear recording.",
-                    Description = "70mai A500S dash camera with GPS, ADAS warning and 2K recording.",
-                    BasePrice = 3200000,
-                    SalePrice = 2950000,
+                    ShortDescription = "Full face safety helmet.",
+                    Description = "AGV K3 helmet with high safety standard and comfortable fit.",
+                    BasePrice = 4500000,
+                    SalePrice = 4200000,
                     StockQuantity = 25,
-                    MainImageUrl = "/images/products/70mai-a500s-main.jpg",
+                    MainImageUrl = "/images/products/agv-k3-main.jpg",
                     Status = "Available",
                     IsActive = true
                 },
                 new Product
                 {
                     Id = 4,
-                    ProductCode = "ACC-MAT-SEDAN-3D",
-                    Name = "3D Floor Mats for Sedan",
-                    Slug = "3d-floor-mats-sedan",
+                    ProductCode = "ACC-GLOVE-ALP",
+                    Name = "Alpinestars Leather Gloves",
+                    Slug = "alpinestars-leather-gloves",
                     CategoryId = 5,
                     ProductType = "Accessory",
-                    ShortDescription = "Anti-slip floor mats, easy to clean.",
-                    Description = "Premium 3D floor mats suitable for many sedan models.",
+                    ShortDescription = "Protective leather gloves.",
+                    Description = "Premium leather gloves for riding.",
                     BasePrice = 1800000,
                     SalePrice = 1500000,
                     StockQuantity = 40,
-                    MainImageUrl = "/images/products/tham-3d-sedan-main.jpg",
+                    MainImageUrl = "/images/products/alpinestars-gloves-main.jpg",
                     Status = "Available",
                     IsActive = true
                 }
             );
 
             modelBuilder.Entity<ProductVariant>().HasData(
-                new ProductVariant { Id = 1, ProductId = 1, VariantName = "1.5G CVT - Pearl White - Black interior", Sku = "VIOS-15G-WHITE-BLACK", PriceOverride = 575000000, StockQuantity = 2, Status = "Available", Version = "1.5G CVT", ExteriorColor = "Pearl White", InteriorColor = "Black" },
-                new ProductVariant { Id = 2, ProductId = 1, VariantName = "1.5G CVT - Red - Black interior", Sku = "VIOS-15G-RED-BLACK", PriceOverride = 572000000, StockQuantity = 1, Status = "Available", Version = "1.5G CVT", ExteriorColor = "Red", InteriorColor = "Black" },
-                new ProductVariant { Id = 3, ProductId = 2, VariantName = "2.0 Premium - Soul Red - Black interior", Sku = "CX5-20PRE-RED-BLACK", PriceOverride = 765000000, StockQuantity = 1, Status = "Available", Version = "2.0 Premium", ExteriorColor = "Soul Red", InteriorColor = "Black" },
-                new ProductVariant { Id = 4, ProductId = 3, VariantName = "64GB bundle", Sku = "70MAI-A500S-64GB", PriceOverride = 2950000, StockQuantity = 15, Status = "Available", Version = "64GB" },
-                new ProductVariant { Id = 5, ProductId = 3, VariantName = "128GB bundle", Sku = "70MAI-A500S-128GB", PriceOverride = 3350000, StockQuantity = 10, Status = "Available", Version = "128GB" },
-                new ProductVariant { Id = 6, ProductId = 4, VariantName = "Black", Sku = "MAT-SEDAN-3D-BLACK", PriceOverride = 1500000, StockQuantity = 20, Status = "Available", Version = "Sedan", InteriorColor = "Black" }
+                new ProductVariant { Id = 1, ProductId = 1, VariantName = "160cc - Black", Sku = "AB-160-BLACK", PriceOverride = 55990000, StockQuantity = 6, Status = "Available", Version = "160cc", MainColor = "Black" },
+                new ProductVariant { Id = 2, ProductId = 1, VariantName = "160cc - Red", Sku = "AB-160-RED", PriceOverride = 56990000, StockQuantity = 4, Status = "Available", Version = "160cc", MainColor = "Red" },
+                new ProductVariant { Id = 3, ProductId = 2, VariantName = "155 VVA - Blue", Sku = "EX-155-BLUE", PriceOverride = 50500000, StockQuantity = 5, Status = "Available", Version = "155 VVA", MainColor = "Blue" },
+                new ProductVariant { Id = 4, ProductId = 3, VariantName = "Size L", Sku = "AGV-K3-L", PriceOverride = 4200000, StockQuantity = 15, Status = "Available", Version = "L" },
+                new ProductVariant { Id = 5, ProductId = 3, VariantName = "Size XL", Sku = "AGV-K3-XL", PriceOverride = 4200000, StockQuantity = 10, Status = "Available", Version = "XL" },
+                new ProductVariant { Id = 6, ProductId = 4, VariantName = "Size M", Sku = "GLOVE-ALP-M", PriceOverride = 1500000, StockQuantity = 20, Status = "Available", Version = "M" }
             );
 
             modelBuilder.Entity<ProductImage>().HasData(
-                new ProductImage { Id = 1, ProductId = 1, ImageUrl = "/images/products/vios-2024-main.jpg", AltText = "Toyota Vios 2024", IsPrimary = true, SortOrder = 1 },
-                new ProductImage { Id = 2, ProductId = 1, ImageUrl = "/images/products/vios-2024-interior.jpg", AltText = "Toyota Vios 2024 interior", IsPrimary = false, SortOrder = 2 },
-                new ProductImage { Id = 3, ProductId = 2, ImageUrl = "/images/products/cx5-2022-main.jpg", AltText = "Mazda CX-5 2022", IsPrimary = true, SortOrder = 1 },
-                new ProductImage { Id = 4, ProductId = 3, ImageUrl = "/images/products/70mai-a500s-main.jpg", AltText = "70mai A500S Dash Camera", IsPrimary = true, SortOrder = 1 },
-                new ProductImage { Id = 5, ProductId = 4, ImageUrl = "/images/products/tham-3d-sedan-main.jpg", AltText = "3D Floor Mats", IsPrimary = true, SortOrder = 1 }
+                new ProductImage { Id = 1, ProductId = 1, ImageUrl = "/images/products/air-blade-2024-main.jpg", AltText = "Honda Air Blade 2024", IsPrimary = true, SortOrder = 1 },
+                new ProductImage { Id = 2, ProductId = 1, ImageUrl = "/images/products/air-blade-2024-side.jpg", AltText = "Honda Air Blade 2024 side", IsPrimary = false, SortOrder = 2 },
+                new ProductImage { Id = 3, ProductId = 2, ImageUrl = "/images/products/exciter-2024-main.jpg", AltText = "Yamaha Exciter 2024", IsPrimary = true, SortOrder = 1 },
+                new ProductImage { Id = 4, ProductId = 3, ImageUrl = "/images/products/agv-k3-main.jpg", AltText = "AGV K3 Helmet", IsPrimary = true, SortOrder = 1 },
+                new ProductImage { Id = 5, ProductId = 4, ImageUrl = "/images/products/alpinestars-gloves-main.jpg", AltText = "Alpinestars Gloves", IsPrimary = true, SortOrder = 1 }
             );
 
             modelBuilder.Entity<Voucher>().HasData(

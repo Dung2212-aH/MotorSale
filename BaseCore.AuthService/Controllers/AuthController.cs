@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using BaseCore.Common;
+using BaseCore.Repository;
 using BaseCore.Services.Authen;
+using Microsoft.EntityFrameworkCore;
 using System.Threading.Tasks;
 
 namespace BaseCore.AuthService.Controllers
@@ -10,12 +12,15 @@ namespace BaseCore.AuthService.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IUserService _userService;
-        private const string SecretKey = "YourSecretKeyForAuthenticationShouldBeLongEnough";
+        private readonly BaseCoreDbContext _context;
+        private readonly IConfiguration _configuration;
         private const int TokenExpirationMinutes = 480; // 8 hours
 
-        public AuthController(IUserService userService)
+        public AuthController(IUserService userService, BaseCoreDbContext context, IConfiguration configuration)
         {
             _userService = userService;
+            _context = context;
+            _configuration = configuration;
         }
 
         [HttpPost("login")]
@@ -33,11 +38,11 @@ namespace BaseCore.AuthService.Controllers
                 return Unauthorized(new { message = "Invalid username or password" });
             }
 
-            var role = ResolveRole(user);
+            var role = await ResolveRole(user);
 
             // Generate JWT token
             var token = TokenHelper.GenerateToken(
-                SecretKey,
+                _configuration["Jwt:SecretKey"] ?? "YourSecretKeyForAuthenticationShouldBeLongEnough",
                 TokenExpirationMinutes,
                 user.Id.ToString(),
                 user.Email,
@@ -104,11 +109,35 @@ namespace BaseCore.AuthService.Controllers
             }
         }
 
-        private static string ResolveRole(BaseCore.Entities.User user)
+        private async Task<string> ResolveRole(BaseCore.Entities.User user)
         {
             if (string.Equals(user.Email, "admin@autoshowroom.vn", System.StringComparison.OrdinalIgnoreCase))
             {
                 return "Admin";
+            }
+
+            var connection = _context.Database.GetDbConnection();
+            if (connection.State != System.Data.ConnectionState.Open)
+            {
+                await connection.OpenAsync();
+            }
+
+            await using var command = connection.CreateCommand();
+            command.CommandText = @"
+SELECT TOP (1) vt.TenVaiTro
+FROM dbo.NGUOIDUNG_VAITRO ur
+JOIN dbo.VAITRO vt ON vt.MaVaiTro = ur.MaVaiTro
+WHERE ur.MaNguoiDung = @userId
+ORDER BY CASE vt.TenVaiTro WHEN 'Admin' THEN 1 WHEN 'Staff' THEN 2 ELSE 3 END";
+            var parameter = command.CreateParameter();
+            parameter.ParameterName = "@userId";
+            parameter.Value = user.Id;
+            command.Parameters.Add(parameter);
+
+            var dbRole = await command.ExecuteScalarAsync() as string;
+            if (!string.IsNullOrWhiteSpace(dbRole))
+            {
+                return dbRole;
             }
 
             return user.UserType switch

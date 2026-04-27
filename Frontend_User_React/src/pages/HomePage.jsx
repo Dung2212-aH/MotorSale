@@ -77,7 +77,12 @@ function HomePage() {
       setCategories(categoriesResponse.filter((category) => category.isActive));
       
       if (Array.isArray(ordersResponse)) {
-        setPendingOrders(ordersResponse.filter(o => o.orderType === 'Deposit' && o.remainingAmount > 0 && o.orderStatus !== 'Cancelled'));
+        setPendingOrders(ordersResponse.filter(o =>
+          o.orderType === 'Deposit' &&
+          o.paymentStatus === 'PartiallyPaid' &&
+          o.remainingAmount > 0 &&
+          o.orderStatus !== 'Cancelled'
+        ));
       }
     } catch (err) {
       setError(err);

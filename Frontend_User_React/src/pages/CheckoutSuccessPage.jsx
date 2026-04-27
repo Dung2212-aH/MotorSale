@@ -55,6 +55,12 @@ function CheckoutSuccessPage() {
             >
               Tiếp tục mua sắm
             </Link>
+            <Link
+              to="/orders"
+              className="inline-flex min-h-12 items-center justify-center rounded-full border border-zinc-300 bg-white px-6 text-sm font-extrabold uppercase tracking-[0.08em] text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Xem tất cả đơn hàng
+            </Link>
           </div>
         </div>
       </section>

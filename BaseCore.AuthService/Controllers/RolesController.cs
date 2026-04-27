@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using BaseCore.Repository;
+using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 
 namespace BaseCore.AuthService.Controllers
@@ -13,31 +15,29 @@ namespace BaseCore.AuthService.Controllers
     [Authorize(Roles = "Admin")]
     public class RolesController : ControllerBase
     {
-        // Static list of available roles
-        // In production, this would be stored in database
-        private static readonly List<RoleDto> _roles = new()
+        private readonly BaseCoreDbContext _context;
+
+        public RolesController(BaseCoreDbContext context)
         {
-            new RoleDto { Id = 1, Name = "Admin", Description = "Administrator with full access", UserType = 1 },
-            new RoleDto { Id = 2, Name = "User", Description = "Regular user with limited access", UserType = 0 },
-            new RoleDto { Id = 3, Name = "Manager", Description = "Manager with moderate access", UserType = 2 }
-        };
+            _context = context;
+        }
 
         /// <summary>
         /// Get all roles
         /// </summary>
         [HttpGet]
-        public IActionResult GetAll()
+        public async Task<IActionResult> GetAll()
         {
-            return Ok(_roles);
+            return Ok(await LoadRolesAsync());
         }
 
         /// <summary>
         /// Get role by ID
         /// </summary>
         [HttpGet("{id}")]
-        public IActionResult GetById(int id)
+        public async Task<IActionResult> GetById(int id)
         {
-            var role = _roles.Find(r => r.Id == id);
+            var role = (await LoadRolesAsync()).Find(r => r.Id == id);
             if (role == null)
                 return NotFound(new { message = "Role not found" });
 
@@ -48,9 +48,9 @@ namespace BaseCore.AuthService.Controllers
         /// Get role by UserType
         /// </summary>
         [HttpGet("by-usertype/{userType}")]
-        public IActionResult GetByUserType(int userType)
+        public async Task<IActionResult> GetByUserType(int userType)
         {
-            var role = _roles.Find(r => r.UserType == userType);
+            var role = (await LoadRolesAsync()).Find(r => r.UserType == userType);
             if (role == null)
                 return NotFound(new { message = "Role not found for this UserType" });
 
@@ -61,17 +61,17 @@ namespace BaseCore.AuthService.Controllers
         /// Get permissions for a role
         /// </summary>
         [HttpGet("{id}/permissions")]
-        public IActionResult GetPermissions(int id)
+        public async Task<IActionResult> GetPermissions(int id)
         {
-            var role = _roles.Find(r => r.Id == id);
+            var role = (await LoadRolesAsync()).Find(r => r.Id == id);
             if (role == null)
                 return NotFound(new { message = "Role not found" });
 
             // Define permissions based on role
-            var permissions = role.UserType switch
+            var permissions = role.Name switch
             {
-                1 => new[] { "users.read", "users.write", "users.delete", "products.read", "products.write", "products.delete", "orders.read", "orders.write", "orders.delete", "categories.read", "categories.write", "categories.delete", "roles.read", "roles.write" },
-                2 => new[] { "users.read", "products.read", "products.write", "orders.read", "orders.write", "categories.read" },
+                "Admin" => new[] { "users.read", "users.write", "users.delete", "products.read", "products.write", "products.delete", "orders.read", "orders.write", "orders.delete", "payments.read", "payments.write", "categories.read", "categories.write", "roles.read" },
+                "Staff" => new[] { "users.read", "products.read", "products.write", "orders.read", "orders.write", "payments.read", "payments.write", "categories.read" },
                 _ => new[] { "products.read", "orders.read", "categories.read" }
             };
 
@@ -80,6 +80,33 @@ namespace BaseCore.AuthService.Controllers
                 role = role.Name,
                 permissions
             });
+        }
+
+        private async Task<List<RoleDto>> LoadRolesAsync()
+        {
+            var roles = new List<RoleDto>();
+            var connection = _context.Database.GetDbConnection();
+            if (connection.State != System.Data.ConnectionState.Open)
+            {
+                await connection.OpenAsync();
+            }
+
+            await using var command = connection.CreateCommand();
+            command.CommandText = "SELECT MaVaiTro, TenVaiTro, MoTa FROM dbo.VAITRO ORDER BY MaVaiTro";
+            await using var reader = await command.ExecuteReaderAsync();
+            while (await reader.ReadAsync())
+            {
+                var name = reader.GetString(1);
+                roles.Add(new RoleDto
+                {
+                    Id = reader.GetByte(0),
+                    Name = name,
+                    Description = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                    UserType = name == "Admin" ? 1 : name == "Staff" ? 2 : 0
+                });
+            }
+
+            return roles;
         }
     }
 

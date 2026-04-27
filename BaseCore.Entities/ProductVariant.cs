@@ -10,9 +10,13 @@ namespace BaseCore.Entities
         public int? StockQuantity { get; set; }
         public string Status { get; set; } = "Available";
         public string? Version { get; set; }
+        public string? Color { get; set; }
         public string? ExteriorColor { get; set; }
         public string? InteriorColor { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
         public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+        public Product? Product { get; set; }
+        public List<ProductImage> Images { get; set; } = new();
     }
 }

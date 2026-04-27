@@ -6,6 +6,8 @@ namespace BaseCore.Entities
         public string Name { get; set; } = "";
         public string Slug { get; set; } = "";
         public string AddressLine { get; set; } = "";
+        // Kept for API compatibility. The current ShowroomDB schema stores address
+        // in SHOWROOM.DiaChi only, without separate ward/district/province columns.
         public string? Ward { get; set; }
         public string? District { get; set; }
         public string Province { get; set; } = "";

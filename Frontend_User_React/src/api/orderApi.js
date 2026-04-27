@@ -32,6 +32,17 @@ export const orderApi = {
       [API_CONFIG.orderServiceUrl, API_CONFIG.productServiceUrl],
     );
   },
+
+  cancelOrder(id, reason) {
+    return apiRequest(
+      {
+        method: 'PUT',
+        url: `${API_ENDPOINTS.orders.list}/${id}/cancel`,
+        data: { reason },
+      },
+      [API_CONFIG.orderServiceUrl, API_CONFIG.productServiceUrl],
+    );
+  },
 };
 
 export const orderService = orderApi;

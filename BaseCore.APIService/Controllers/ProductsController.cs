@@ -8,7 +8,7 @@ using BaseCore.Repository.EFCore;
 namespace BaseCore.APIService.Controllers
 {
     /// <summary>
-    /// Product API Controller for showroom cars and car accessories.
+    /// Product API Controller for motorcycles and parts.
     /// </summary>
     [Route("api/[controller]")]
     [ApiController]
@@ -37,10 +37,6 @@ namespace BaseCore.APIService.Controllers
             [FromQuery] int? carModelId,
             [FromQuery] decimal? minPrice,
             [FromQuery] decimal? maxPrice,
-            [FromQuery] int? year,
-            [FromQuery] string? condition,
-            [FromQuery] string? fuelType,
-            [FromQuery] string? transmission,
             [FromQuery] string? color,
             [FromQuery] int? showroomId,
             [FromQuery] string? status,
@@ -59,10 +55,10 @@ namespace BaseCore.APIService.Controllers
                 carModelId,
                 minPrice,
                 maxPrice,
-                year,
-                condition,
-                fuelType,
-                transmission,
+                null,
+                null,
+                null,
+                null,
                 color,
                 showroomId,
                 status,
@@ -102,8 +98,7 @@ namespace BaseCore.APIService.Controllers
 
             var showrooms = await _context.Showrooms
                 .Where(s => s.IsActive)
-                .OrderBy(s => s.Province)
-                .ThenBy(s => s.Name)
+                .OrderBy(s => s.Name)
                 .ToListAsync();
 
             return Ok(new
@@ -161,6 +156,76 @@ namespace BaseCore.APIService.Controllers
             }
 
             return Ok(ToDetailDto(product));
+        }
+
+        [HttpGet("{id:int}/variants")]
+        public async Task<IActionResult> GetVariants(int id)
+        {
+            var variants = await _context.ProductVariants
+                .Where(v => v.ProductId == id)
+                .Include(v => v.Images)
+                .OrderBy(v => v.Version)
+                .ThenBy(v => v.Color)
+                .ToListAsync();
+
+            return Ok(variants.Select(v => new ProductVariantDto
+            {
+                Id = v.Id,
+                VariantName = v.VariantName,
+                Sku = v.Sku,
+                PriceOverride = v.PriceOverride,
+                StockQuantity = v.StockQuantity,
+                Status = v.Status,
+                Version = v.Version,
+                Color = v.Color,
+                Images = v.Images.OrderBy(i => i.SortOrder).Select(i => new ProductImageDto
+                {
+                    Id = i.Id,
+                    ProductVariantId = i.ProductVariantId,
+                    ImageUrl = i.ImageUrl,
+                    AltText = i.AltText,
+                    IsPrimary = i.IsPrimary,
+                    SortOrder = i.SortOrder
+                }).ToList()
+            }));
+        }
+
+        [HttpGet("{id:int}/colors")]
+        public async Task<IActionResult> GetColors(int id)
+        {
+            var colors = await _context.ProductVariants
+                .Where(v => v.ProductId == id && v.Color != null)
+                .Select(v => new { v.Id, v.Version, v.Color, v.StockQuantity, v.PriceOverride })
+                .OrderBy(v => v.Version)
+                .ThenBy(v => v.Color)
+                .ToListAsync();
+
+            return Ok(colors);
+        }
+
+        [HttpGet("{id:int}/images")]
+        public async Task<IActionResult> GetImages(int id, [FromQuery] int? variantId)
+        {
+            var query = _context.ProductImages.Where(i => i.ProductId == id);
+            if (variantId.HasValue)
+            {
+                query = query.Where(i => i.ProductVariantId == variantId.Value || i.ProductVariantId == null);
+            }
+
+            var images = await query.OrderBy(i => i.ProductVariantId == variantId ? 0 : 1)
+                .ThenByDescending(i => i.IsPrimary)
+                .ThenBy(i => i.SortOrder)
+                .ToListAsync();
+
+            return Ok(images.Select(i => new ProductImageDto
+            {
+                Id = i.Id,
+                ProductVariantId = i.ProductVariantId,
+                ImageUrl = i.ImageUrl,
+                AltText = i.AltText,
+                IsPrimary = i.IsPrimary,
+                SortOrder = i.SortOrder
+            }));
         }
 
         [HttpPost]
@@ -255,15 +320,11 @@ namespace BaseCore.APIService.Controllers
                 BasePrice = product.BasePrice,
                 SalePrice = product.SalePrice,
                 StockQuantity = product.StockQuantity,
-                MainImageUrl = product.MainImageUrl,
+                MainImageUrl = ResolveMainImageUrl(product),
                 IsActive = product.IsActive,
-                Condition = product.Condition,
-                Year = product.Year,
-                Mileage = product.Mileage,
-                ExteriorColor = product.ExteriorColor,
-                Transmission = product.Transmission,
-                FuelType = product.FuelType,
-                Engine = product.Engine,
+                MainColor = product.MainColor,
+                MotorcycleType = product.MotorcycleType,
+                EngineCapacity = product.EngineCapacity,
                 Status = product.Status,
                 CreatedAt = product.CreatedAt,
                 UpdatedAt = product.UpdatedAt
@@ -292,20 +353,21 @@ namespace BaseCore.APIService.Controllers
                 BasePrice = product.BasePrice,
                 SalePrice = product.SalePrice,
                 StockQuantity = product.StockQuantity,
-                MainImageUrl = product.MainImageUrl,
+                MainImageUrl = ResolveMainImageUrl(product),
                 IsActive = product.IsActive,
-                Condition = product.Condition,
-                Year = product.Year,
-                Mileage = product.Mileage,
-                ExteriorColor = product.ExteriorColor,
-                InteriorColor = product.InteriorColor,
-                Seats = product.Seats,
-                Transmission = product.Transmission,
-                FuelType = product.FuelType,
-                Engine = product.Engine,
-                DriveType = product.DriveType,
-                Vin = product.Vin,
-                LicensePlate = product.LicensePlate,
+                MainColor = product.MainColor,
+                MotorcycleType = product.MotorcycleType,
+                EngineCapacity = product.EngineCapacity,
+                Power = product.Power,
+                Torque = product.Torque,
+                FuelTankCapacity = product.FuelTankCapacity,
+                FrontBrake = product.FrontBrake,
+                RearBrake = product.RearBrake,
+                HasAbs = product.HasAbs,
+                Weight = product.Weight,
+                SeatHeight = product.SeatHeight,
+                Origin = product.Origin,
+                WarrantyMonths = product.WarrantyMonths,
                 Status = product.Status,
                 CreatedAt = product.CreatedAt,
                 UpdatedAt = product.UpdatedAt,
@@ -314,6 +376,7 @@ namespace BaseCore.APIService.Controllers
                     .Select(i => new ProductImageDto
                     {
                         Id = i.Id,
+                        ProductVariantId = i.ProductVariantId,
                         ImageUrl = i.ImageUrl,
                         AltText = i.AltText,
                         IsPrimary = i.IsPrimary,
@@ -330,13 +393,35 @@ namespace BaseCore.APIService.Controllers
                         StockQuantity = v.StockQuantity,
                         Status = v.Status,
                         Version = v.Version,
-                        ExteriorColor = v.ExteriorColor,
-                        InteriorColor = v.InteriorColor
+                        Color = v.Color,
+                        Images = v.Images
+                            .OrderBy(i => i.SortOrder)
+                            .Select(i => new ProductImageDto
+                            {
+                                Id = i.Id,
+                                ProductVariantId = i.ProductVariantId,
+                                ImageUrl = i.ImageUrl,
+                                AltText = i.AltText,
+                                IsPrimary = i.IsPrimary,
+                                SortOrder = i.SortOrder
+                            })
+                            .ToList()
                     })
                     .ToList()
             };
 
             return dto;
+        }
+
+        private static string? ResolveMainImageUrl(Product product)
+        {
+            return product.Images
+                .OrderByDescending(i => i.IsPrimary)
+                .ThenBy(i => i.SortOrder)
+                .ThenBy(i => i.Id)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url))
+                ?? product.MainImageUrl;
         }
 
         private async Task<IActionResult?> ValidateReferences(int categoryId, int? brandId, int? carModelId, int? showroomId)
@@ -382,18 +467,19 @@ namespace BaseCore.APIService.Controllers
             product.StockQuantity = dto.StockQuantity;
             product.MainImageUrl = dto.MainImageUrl;
             product.IsActive = dto.IsActive;
-            product.Condition = dto.Condition;
-            product.Year = dto.Year;
-            product.Mileage = dto.Mileage;
-            product.ExteriorColor = dto.ExteriorColor;
-            product.InteriorColor = dto.InteriorColor;
-            product.Seats = dto.Seats;
-            product.Transmission = dto.Transmission;
-            product.FuelType = dto.FuelType;
-            product.Engine = dto.Engine;
-            product.DriveType = dto.DriveType;
-            product.Vin = dto.Vin;
-            product.LicensePlate = dto.LicensePlate;
+            product.MainColor = dto.MainColor;
+            product.MotorcycleType = dto.MotorcycleType;
+            product.EngineCapacity = dto.EngineCapacity;
+            product.Power = dto.Power;
+            product.Torque = dto.Torque;
+            product.FuelTankCapacity = dto.FuelTankCapacity;
+            product.FrontBrake = dto.FrontBrake;
+            product.RearBrake = dto.RearBrake;
+            product.HasAbs = dto.HasAbs;
+            product.Weight = dto.Weight;
+            product.SeatHeight = dto.SeatHeight;
+            product.Origin = dto.Origin;
+            product.WarrantyMonths = dto.WarrantyMonths;
             product.Status = dto.Status;
         }
 
@@ -414,18 +500,19 @@ namespace BaseCore.APIService.Controllers
             product.StockQuantity = dto.StockQuantity ?? product.StockQuantity;
             product.MainImageUrl = dto.MainImageUrl ?? product.MainImageUrl;
             product.IsActive = dto.IsActive ?? product.IsActive;
-            product.Condition = dto.Condition ?? product.Condition;
-            product.Year = dto.Year ?? product.Year;
-            product.Mileage = dto.Mileage ?? product.Mileage;
-            product.ExteriorColor = dto.ExteriorColor ?? product.ExteriorColor;
-            product.InteriorColor = dto.InteriorColor ?? product.InteriorColor;
-            product.Seats = dto.Seats ?? product.Seats;
-            product.Transmission = dto.Transmission ?? product.Transmission;
-            product.FuelType = dto.FuelType ?? product.FuelType;
-            product.Engine = dto.Engine ?? product.Engine;
-            product.DriveType = dto.DriveType ?? product.DriveType;
-            product.Vin = dto.Vin ?? product.Vin;
-            product.LicensePlate = dto.LicensePlate ?? product.LicensePlate;
+            product.MainColor = dto.MainColor ?? product.MainColor;
+            product.MotorcycleType = dto.MotorcycleType ?? product.MotorcycleType;
+            product.EngineCapacity = dto.EngineCapacity ?? product.EngineCapacity;
+            product.Power = dto.Power ?? product.Power;
+            product.Torque = dto.Torque ?? product.Torque;
+            product.FuelTankCapacity = dto.FuelTankCapacity ?? product.FuelTankCapacity;
+            product.FrontBrake = dto.FrontBrake ?? product.FrontBrake;
+            product.RearBrake = dto.RearBrake ?? product.RearBrake;
+            product.HasAbs = dto.HasAbs ?? product.HasAbs;
+            product.Weight = dto.Weight ?? product.Weight;
+            product.SeatHeight = dto.SeatHeight ?? product.SeatHeight;
+            product.Origin = dto.Origin ?? product.Origin;
+            product.WarrantyMonths = dto.WarrantyMonths ?? product.WarrantyMonths;
             product.Status = dto.Status ?? product.Status;
         }
     }
@@ -439,7 +526,7 @@ namespace BaseCore.APIService.Controllers
         public int? BrandId { get; set; }
         public int? CarModelId { get; set; }
         public int? ShowroomId { get; set; }
-        public string ProductType { get; set; } = "Car";
+        public string ProductType { get; set; } = "Motorcycle";
         public string? ShortDescription { get; set; }
         public string? Description { get; set; }
         public decimal BasePrice { get; set; }
@@ -447,18 +534,19 @@ namespace BaseCore.APIService.Controllers
         public int StockQuantity { get; set; }
         public string? MainImageUrl { get; set; }
         public bool IsActive { get; set; } = true;
-        public string? Condition { get; set; }
-        public int? Year { get; set; }
-        public int? Mileage { get; set; }
-        public string? ExteriorColor { get; set; }
-        public string? InteriorColor { get; set; }
-        public int? Seats { get; set; }
-        public string? Transmission { get; set; }
-        public string? FuelType { get; set; }
-        public string? Engine { get; set; }
-        public string? DriveType { get; set; }
-        public string? Vin { get; set; }
-        public string? LicensePlate { get; set; }
+        public string? MainColor { get; set; }
+        public string? MotorcycleType { get; set; }
+        public int? EngineCapacity { get; set; }
+        public string? Power { get; set; }
+        public string? Torque { get; set; }
+        public decimal? FuelTankCapacity { get; set; }
+        public string? FrontBrake { get; set; }
+        public string? RearBrake { get; set; }
+        public bool? HasAbs { get; set; }
+        public decimal? Weight { get; set; }
+        public int? SeatHeight { get; set; }
+        public string? Origin { get; set; }
+        public int? WarrantyMonths { get; set; }
         public string Status { get; set; } = "Available";
     }
 
@@ -483,13 +571,9 @@ namespace BaseCore.APIService.Controllers
         public int StockQuantity { get; set; }
         public string? MainImageUrl { get; set; }
         public bool IsActive { get; set; }
-        public string? Condition { get; set; }
-        public int? Year { get; set; }
-        public int? Mileage { get; set; }
-        public string? ExteriorColor { get; set; }
-        public string? Transmission { get; set; }
-        public string? FuelType { get; set; }
-        public string? Engine { get; set; }
+        public string? MainColor { get; set; }
+        public string? MotorcycleType { get; set; }
+        public int? EngineCapacity { get; set; }
         public string Status { get; set; } = "";
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
@@ -498,11 +582,16 @@ namespace BaseCore.APIService.Controllers
     public class ProductDetailDto : ProductListItemDto
     {
         public string? Description { get; set; }
-        public string? InteriorColor { get; set; }
-        public int? Seats { get; set; }
-        public string? DriveType { get; set; }
-        public string? Vin { get; set; }
-        public string? LicensePlate { get; set; }
+        public string? Power { get; set; }
+        public string? Torque { get; set; }
+        public decimal? FuelTankCapacity { get; set; }
+        public string? FrontBrake { get; set; }
+        public string? RearBrake { get; set; }
+        public bool? HasAbs { get; set; }
+        public decimal? Weight { get; set; }
+        public int? SeatHeight { get; set; }
+        public string? Origin { get; set; }
+        public int? WarrantyMonths { get; set; }
         public List<ProductImageDto> Images { get; set; } = new();
         public List<ProductVariantDto> Variants { get; set; } = new();
     }
@@ -510,6 +599,7 @@ namespace BaseCore.APIService.Controllers
     public class ProductImageDto
     {
         public int Id { get; set; }
+        public int? ProductVariantId { get; set; }
         public string ImageUrl { get; set; } = "";
         public string? AltText { get; set; }
         public bool IsPrimary { get; set; }
@@ -525,8 +615,8 @@ namespace BaseCore.APIService.Controllers
         public int? StockQuantity { get; set; }
         public string Status { get; set; } = "";
         public string? Version { get; set; }
-        public string? ExteriorColor { get; set; }
-        public string? InteriorColor { get; set; }
+        public string? Color { get; set; }
+        public List<ProductImageDto> Images { get; set; } = new();
     }
 
     public class ProductUpdateDto
@@ -546,18 +636,19 @@ namespace BaseCore.APIService.Controllers
         public int? StockQuantity { get; set; }
         public string? MainImageUrl { get; set; }
         public bool? IsActive { get; set; }
-        public string? Condition { get; set; }
-        public int? Year { get; set; }
-        public int? Mileage { get; set; }
-        public string? ExteriorColor { get; set; }
-        public string? InteriorColor { get; set; }
-        public int? Seats { get; set; }
-        public string? Transmission { get; set; }
-        public string? FuelType { get; set; }
-        public string? Engine { get; set; }
-        public string? DriveType { get; set; }
-        public string? Vin { get; set; }
-        public string? LicensePlate { get; set; }
+        public string? MainColor { get; set; }
+        public string? MotorcycleType { get; set; }
+        public int? EngineCapacity { get; set; }
+        public string? Power { get; set; }
+        public string? Torque { get; set; }
+        public decimal? FuelTankCapacity { get; set; }
+        public string? FrontBrake { get; set; }
+        public string? RearBrake { get; set; }
+        public bool? HasAbs { get; set; }
+        public decimal? Weight { get; set; }
+        public int? SeatHeight { get; set; }
+        public string? Origin { get; set; }
+        public int? WarrantyMonths { get; set; }
         public string? Status { get; set; }
     }
 }

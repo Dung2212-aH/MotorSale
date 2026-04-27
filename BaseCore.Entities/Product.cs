@@ -10,7 +10,7 @@ namespace BaseCore.Entities
         public int? BrandId { get; set; }
         public int? CarModelId { get; set; }
         public int? ShowroomId { get; set; }
-        public string ProductType { get; set; } = "Car";
+        public string ProductType { get; set; } = "Motorcycle";
         public string? ShortDescription { get; set; }
         public string? Description { get; set; }
         public decimal BasePrice { get; set; }
@@ -19,6 +19,19 @@ namespace BaseCore.Entities
         public string? MainImageUrl { get; set; }
         public bool IsActive { get; set; } = true;
 
+        public string? MainColor { get; set; }
+        public string? MotorcycleType { get; set; }
+        public int? EngineCapacity { get; set; }
+        public string? Power { get; set; }
+        public string? Torque { get; set; }
+        public decimal? FuelTankCapacity { get; set; }
+        public string? FrontBrake { get; set; }
+        public string? RearBrake { get; set; }
+        public bool? HasAbs { get; set; }
+        public decimal? Weight { get; set; }
+        public int? SeatHeight { get; set; }
+        public string? Origin { get; set; }
+        public int? WarrantyMonths { get; set; }
         public string? Condition { get; set; }
         public int? Year { get; set; }
         public int? Mileage { get; set; }

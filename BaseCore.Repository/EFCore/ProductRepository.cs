@@ -48,6 +48,7 @@ namespace BaseCore.Repository.EFCore
                 .Include(p => p.CarModel)
                 .Include(p => p.Showroom)
                 .Include(p => p.Variants)
+                    .ThenInclude(v => v.Images)
                 .Include(p => p.Images)
                 .FirstOrDefaultAsync(p => p.Id == productId);
         }
@@ -59,6 +60,8 @@ namespace BaseCore.Repository.EFCore
                 .Include(p => p.Brand)
                 .Include(p => p.CarModel)
                 .Include(p => p.Showroom)
+                .Include(p => p.Variants)
+                .Include(p => p.Images)
                 .ToListAsync();
         }
 
@@ -86,6 +89,7 @@ namespace BaseCore.Repository.EFCore
                 .Include(p => p.Brand)
                 .Include(p => p.CarModel)
                 .Include(p => p.Showroom)
+                .Include(p => p.Images)
                 .AsQueryable();
 
             if (!string.IsNullOrEmpty(keyword))
@@ -129,32 +133,12 @@ namespace BaseCore.Repository.EFCore
                 query = query.Where(p => (p.SalePrice ?? p.BasePrice) <= maxPrice.Value);
             }
 
-            if (year.HasValue)
-            {
-                query = query.Where(p => p.Year == year);
-            }
-
-            if (!string.IsNullOrWhiteSpace(condition))
-            {
-                query = query.Where(p => p.Condition == condition);
-            }
-
-            if (!string.IsNullOrWhiteSpace(fuelType))
-            {
-                query = query.Where(p => p.FuelType == fuelType);
-            }
-
-            if (!string.IsNullOrWhiteSpace(transmission))
-            {
-                query = query.Where(p => p.Transmission == transmission);
-            }
-
             if (!string.IsNullOrWhiteSpace(color))
             {
                 var normalizedColor = color.Trim().ToLower();
                 query = query.Where(p =>
-                    (p.ExteriorColor != null && p.ExteriorColor.ToLower().Contains(normalizedColor)) ||
-                    (p.InteriorColor != null && p.InteriorColor.ToLower().Contains(normalizedColor)));
+                    (p.MainColor != null && p.MainColor.ToLower().Contains(normalizedColor)) ||
+                    p.Variants.Any(v => v.Color != null && v.Color.ToLower().Contains(normalizedColor)));
             }
 
             if (showroomId.HasValue && showroomId > 0)
@@ -173,8 +157,6 @@ namespace BaseCore.Repository.EFCore
             {
                 "price_asc" => query.OrderBy(p => p.SalePrice ?? p.BasePrice),
                 "price_desc" => query.OrderByDescending(p => p.SalePrice ?? p.BasePrice),
-                "year_desc" => query.OrderByDescending(p => p.Year),
-                "year_asc" => query.OrderBy(p => p.Year),
                 "name_asc" => query.OrderBy(p => p.Name),
                 "name_desc" => query.OrderByDescending(p => p.Name),
                 _ => query.OrderByDescending(p => p.Id)
@@ -196,6 +178,7 @@ namespace BaseCore.Repository.EFCore
                 .Include(p => p.Brand)
                 .Include(p => p.CarModel)
                 .Include(p => p.Showroom)
+                .Include(p => p.Images)
                 .ToListAsync();
         }
     }

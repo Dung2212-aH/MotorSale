@@ -28,15 +28,8 @@ namespace BaseCore.APIService.Controllers
                 return Unauthorized();
             }
 
-            var cart = await GetOrCreateCart(userId.Value);
-            await _context.Entry(cart)
-                .Collection(c => c.Items)
-                .Query()
-                .Include(i => i.Product)
-                .Include(i => i.ProductVariant)
-                .LoadAsync();
-
-            return Ok(cart);
+            var cart = await LoadCart(userId.Value);
+            return Ok(ToCartDto(cart));
         }
 
         [HttpPost("items")]
@@ -59,11 +52,6 @@ namespace BaseCore.APIService.Controllers
                 return NotFound(new { message = "Product not found" });
             }
 
-            if (product.StockQuantity < dto.Quantity)
-            {
-                return BadRequest(new { message = "Insufficient stock" });
-            }
-
             ProductVariant? variant = null;
             if (dto.ProductVariantId.HasValue)
             {
@@ -72,6 +60,12 @@ namespace BaseCore.APIService.Controllers
                 {
                     return BadRequest(new { message = "Variant not found" });
                 }
+            }
+
+            var availableStock = variant?.StockQuantity ?? product.StockQuantity;
+            if (availableStock < dto.Quantity)
+            {
+                return BadRequest(new { message = "Insufficient stock" });
             }
 
             var cart = await GetOrCreateCart(userId.Value);
@@ -105,7 +99,8 @@ namespace BaseCore.APIService.Controllers
             cart.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return Ok(item);
+            cart = await LoadCart(userId.Value);
+            return Ok(ToCartDto(cart));
         }
 
         [HttpPut("items/{itemId:int}")]
@@ -137,7 +132,8 @@ namespace BaseCore.APIService.Controllers
             item.Cart!.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
 
-            return Ok(item);
+            var cart = await LoadCart(userId.Value);
+            return Ok(ToCartDto(cart));
         }
 
         [HttpDelete("items/{itemId:int}")]
@@ -159,7 +155,50 @@ namespace BaseCore.APIService.Controllers
                 await _context.SaveChangesAsync();
             }
 
-            return Ok(new { message = "Cart item removed" });
+            var cart = await LoadCart(userId.Value);
+            return Ok(ToCartDto(cart));
+        }
+
+        [HttpDelete("clear")]
+        public async Task<IActionResult> ClearCart()
+        {
+            var userId = GetUserId();
+            if (userId == null)
+            {
+                return Unauthorized();
+            }
+
+            var cart = await GetOrCreateCart(userId.Value);
+            var items = await _context.CartItems.Where(i => i.CartId == cart.Id).ToListAsync();
+
+            if (items.Any())
+            {
+                _context.CartItems.RemoveRange(items);
+                cart.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+            }
+
+            var updatedCart = await LoadCart(userId.Value);
+            return Ok(ToCartDto(updatedCart));
+        }
+
+        private async Task<Cart> LoadCart(int userId)
+        {
+            var cart = await GetOrCreateCart(userId);
+
+            await _context.Entry(cart)
+                .Collection(c => c.Items)
+                .Query()
+                .Include(i => i.Product)
+                    .ThenInclude(p => p!.Brand)
+                .Include(i => i.Product)
+                    .ThenInclude(p => p!.Category)
+                .Include(i => i.Product)
+                    .ThenInclude(p => p!.Images)
+                .Include(i => i.ProductVariant)
+                .LoadAsync();
+
+            return cart;
         }
 
         private async Task<Cart> GetOrCreateCart(int userId)
@@ -180,6 +219,85 @@ namespace BaseCore.APIService.Controllers
         {
             var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
             return int.TryParse(userId, out var parsedUserId) ? parsedUserId : null;
+        }
+
+        private static object ToCartDto(Cart cart)
+        {
+            var items = cart.Items
+                .OrderBy(i => i.Id)
+                .Select(i =>
+                {
+                    var product = i.Product;
+                    var variant = i.ProductVariant;
+                    var unitPrice = i.UnitPrice;
+                    var quantity = i.Quantity;
+
+                    return new
+                    {
+                        i.Id,
+                        i.CartId,
+                        i.ProductId,
+                        i.ProductVariantId,
+                        Quantity = quantity,
+                        UnitPrice = unitPrice,
+                        LineTotal = unitPrice * quantity,
+                        Product = product == null ? null : new
+                        {
+                            product.Id,
+                            product.ProductCode,
+                            product.Name,
+                            product.Slug,
+                            product.CategoryId,
+                            CategoryName = product.Category?.Name,
+                            product.BrandId,
+                            BrandName = product.Brand?.Name,
+                            product.ProductType,
+                            product.ShortDescription,
+                            product.BasePrice,
+                            product.SalePrice,
+                            product.StockQuantity,
+                            MainImageUrl = ResolveMainImageUrl(product),
+                            product.IsActive,
+                            product.Status
+                        },
+                        ProductVariant = variant == null ? null : new
+                        {
+                            variant.Id,
+                            variant.ProductId,
+                            variant.VariantName,
+                            variant.Sku,
+                            variant.PriceOverride,
+                            variant.StockQuantity,
+                            variant.Status,
+                            variant.Version,
+                            variant.Color
+                        }
+                    };
+                })
+                .ToList();
+
+            return new
+            {
+                cart.Id,
+                cart.UserId,
+                cart.Status,
+                cart.CreatedAt,
+                cart.UpdatedAt,
+                Items = items,
+                TotalItems = items.Sum(i => i.Quantity),
+                Subtotal = items.Sum(i => i.LineTotal)
+            };
+        }
+
+        private static string? ResolveMainImageUrl(Product product)
+        {
+            return product.Images
+                .OrderByDescending(i => i.IsPrimary)
+                .ThenBy(i => i.SortOrder)
+                .ThenBy(i => i.Id)
+                .Select(i => i.ImageUrl)
+                .FirstOrDefault(url => !string.IsNullOrWhiteSpace(url))
+                ?? product.MainImageUrl;
         }
     }
 

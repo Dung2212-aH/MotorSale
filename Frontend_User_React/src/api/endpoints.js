@@ -29,8 +29,16 @@ export const API_ENDPOINTS = {
     items: '/api/cart/items',
     item: (id) => `/api/cart/items/${id}`,
   },
+  vouchers: {
+    list: '/api/vouchers',
+    validate: '/api/vouchers/validate',
+    applicable: '/api/vouchers/applicable',
+  },
   orders: {
     list: '/api/orders',
+  },
+  payments: {
+    byOrder: (orderId) => `/api/payments/order/${orderId}`,
   },
   users: {
     list: '/api/users',

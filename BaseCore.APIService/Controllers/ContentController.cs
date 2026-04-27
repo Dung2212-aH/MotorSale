@@ -132,7 +132,7 @@ namespace BaseCore.APIService.Controllers
         [HttpGet("vouchers/{code}")]
         public async Task<IActionResult> GetVoucher(string code)
         {
-            var now = DateTime.UtcNow;
+            var now = DateTime.Now;
             var voucher = await _context.Vouchers.FirstOrDefaultAsync(v =>
                 v.Code == code &&
                 v.IsActive &&

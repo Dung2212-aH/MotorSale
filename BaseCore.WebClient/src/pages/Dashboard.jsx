@@ -6,7 +6,7 @@ const Dashboard = () => {
     const [stats, setStats] = useState({
         products: 0,
         categories: 0,
-        cars: 0,
+        motorcycles: 0,
         accessories: 0,
         users: 0,
     });
@@ -19,9 +19,9 @@ const Dashboard = () => {
 
     const loadStats = async () => {
         try {
-            const [productsRes, carsRes, accessoriesRes, categoriesRes] = await Promise.all([
+            const [productsRes, motorcyclesRes, accessoriesRes, categoriesRes] = await Promise.all([
                 productApi.getAll(),
-                productApi.getAll({ productType: 'Car', pageSize: 1 }),
+                productApi.getAll({ productType: 'Motorcycle', pageSize: 1 }),
                 productApi.getAll({ productType: 'Accessory', pageSize: 1 }),
                 categoryApi.getAll(),
             ]);
@@ -38,7 +38,7 @@ const Dashboard = () => {
 
             setStats({
                 products: productsRes.data?.totalCount || productsRes.data?.items?.length || productsRes.data?.length || 0,
-                cars: carsRes.data?.totalCount || 0,
+                motorcycles: motorcyclesRes.data?.totalCount || 0,
                 accessories: accessoriesRes.data?.totalCount || 0,
                 categories: categoriesRes.data?.length || 0,
                 users: usersCount,
@@ -56,7 +56,7 @@ const Dashboard = () => {
                 <div className="container-fluid">
                     <div className="row mb-2">
                         <div className="col-sm-6">
-                            <h1 className="m-0">Auto Showroom Dashboard</h1>
+                            <h1 className="m-0">Motorcycle Showroom Dashboard</h1>
                         </div>
                     </div>
                 </div>
@@ -119,11 +119,11 @@ const Dashboard = () => {
                             <div className="col-lg-3 col-6">
                                 <div className="small-box bg-primary">
                                     <div className="inner">
-                                        <h3>{stats.cars}</h3>
-                                        <p>Cars</p>
+                                        <h3>{stats.motorcycles}</h3>
+                                        <p>Motorcycles</p>
                                     </div>
                                     <div className="icon">
-                                        <i className="fas fa-car"></i>
+                                        <i className="fas fa-motorcycle"></i>
                                     </div>
                                     <a href="/products" className="small-box-footer">
                                         More info <i className="fas fa-arrow-circle-right"></i>
@@ -151,12 +151,12 @@ const Dashboard = () => {
                         <div className="col-12">
                             <div className="card">
                                 <div className="card-header">
-                                    <h3 className="card-title">Auto showroom MVP modules</h3>
+                                    <h3 className="card-title">Motorcycle showroom MVP modules</h3>
                                 </div>
                                 <div className="card-body">
                                     <p>This admin app now focuses on showroom catalog and sales operations:</p>
                                     <ul>
-                                        <li><strong>Catalog:</strong> cars, accessories, brands, models, categories and showroom location</li>
+                                        <li><strong>Catalog:</strong> motorcycles, accessories, brands, models, categories and showroom location</li>
                                         <li><strong>Commerce:</strong> stock status, order snapshots, payment status and voucher-ready totals</li>
                                         <li><strong>Content:</strong> contact requests, FAQ and blog entities are available in the backend model</li>
                                         <li><strong>Access:</strong> Customer, Staff and Admin roles are represented by the existing user type flow</li>

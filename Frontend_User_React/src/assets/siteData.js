@@ -1,3 +1,11 @@
+import {
+  FaFacebookF,
+  FaYoutube,
+  FaTwitter,
+  FaPinterestP,
+  FaInstagram
+} from "react-icons/fa";
+
 export const CDN = 'https://bizweb.dktcdn.net/100/519/812';
 
 export const brandAssets = {
@@ -80,20 +88,39 @@ export const serviceHighlights = [
 
 export const navItems = [
   { label: 'Trang chủ', to: '/' },
-  { label: 'Giới thiệu', to: '/' },
   { label: 'Sản phẩm', to: '/products', hasCaret: true },
-  { label: 'Tin tức', to: '/', hasCaret: true },
   { label: 'Liên hệ', to: '/' },
   { label: 'Hệ thống cửa hàng', to: '/' },
   { label: 'Câu hỏi thường gặp', to: '/' },
 ];
 
 export const socialLinks = [
-  { label: 'f', className: 'bg-[#1877f2]', href: '#' },
-  { label: '▶', className: 'bg-[#ff2d20] text-[15px]', href: '#' },
-  { label: 't', className: 'bg-[#1d9bf0]', href: '#' },
-  { label: 'p', className: 'bg-[#e60023]', href: '#' },
-  { label: '◎', className: 'bg-[linear-gradient(135deg,#ffb347,#fd1d1d_55%,#c13584)]', href: '#' },
+  {
+    icon: FaFacebookF,
+    className: "bg-[#1877f2]",
+    href: "#"
+  },
+  {
+    icon: FaYoutube,
+    className: "bg-[#ff0000]",
+    href: "#"
+  },
+  {
+    icon: FaTwitter,
+    className: "bg-[#1d9bf0]",
+    href: "#"
+  },
+  {
+    icon: FaPinterestP,
+    className: "bg-[#e60023]",
+    href: "#"
+  },
+  {
+    icon: FaInstagram,
+    className:
+      "bg-[linear-gradient(135deg,#ffb347,#fd1d1d_55%,#c13584)]",
+    href: "#"
+  }
 ];
 
 export const productBrandGroups = [

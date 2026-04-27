@@ -403,7 +403,7 @@ function ProductDetailPage() {
                 </div>
               </div>
 
-              <ProductVoucherBox />
+              <ProductVoucherBox product={product} />
 
               <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
                 <ProductTabs product={product} />
