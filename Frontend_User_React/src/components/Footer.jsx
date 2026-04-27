@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { brandAssets } from '../assets/siteData.js';
+import { FaFacebookF, FaYoutube, FaInstagram, FaTiktok } from 'react-icons/fa';
 
 function Footer() {
   return (
@@ -15,8 +16,8 @@ function Footer() {
           </p>
 
           <ul className="mt-4 space-y-2 text-sm text-zinc-300">
-            <li>Địa chỉ: 70 Lữ Gia, Phường 15, Quận 11, TP.HCM</li>
-            <li>Email: support@euro-moto.vn</li>
+            <li>Địa chỉ: 236 Hoàng Quốc Việt, phường Nghĩa Đô, TP Hà Nội</li>
+            <li>Email: phamtiendung2k5hc@gmail.com</li>
             <li>Hotline: 1900 6750</li>
           </ul>
         </div>
@@ -74,13 +75,20 @@ function Footer() {
           </form>
 
           <div className="mt-5 flex gap-2" aria-label="Mạng xã hội">
-            {['f', 'yt', 'ig', 'tk'].map((item) => (
-              <span
-                key={item}
-                className="grid h-9 w-9 place-items-center rounded-lg bg-zinc-800 text-[11px] font-extrabold uppercase tracking-[0.08em] text-white"
+            {[
+              { id: 'f', icon: <FaFacebookF /> },
+              { id: 'yt', icon: <FaYoutube /> },
+              { id: 'ig', icon: <FaInstagram /> },
+              { id: 'tk', icon: <FaTiktok /> }
+            ].map((item) => (
+              <a
+                href="#"
+                key={item.id}
+                className="grid h-9 w-9 place-items-center rounded-lg bg-zinc-800 text-[15px] text-white transition hover:bg-[#d71920]"
+                aria-label={`Mạng xã hội ${item.id}`}
               >
-                {item}
-              </span>
+                {item.icon}
+              </a>
             ))}
           </div>
         </div>
