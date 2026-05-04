@@ -119,6 +119,25 @@ const saveAuthUser = (user) => {
   notifyAuthChanged(user);
 };
 
+const mergeStoredUser = (data = {}) => {
+  const currentUser = getStoredUser();
+  const token = currentUser?.token || localStorage.getItem(TOKEN_KEY);
+
+  if (!token) {
+    return null;
+  }
+
+  const nextUser = {
+    ...currentUser,
+    ...data,
+    token,
+  };
+
+  localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+  notifyAuthChanged(nextUser);
+  return nextUser;
+};
+
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem(TOKEN_KEY);
@@ -181,6 +200,10 @@ export const authApi = {
   },
 
   getToken: () => localStorage.getItem(TOKEN_KEY),
+
+  updateStoredUser(data) {
+    return mergeStoredUser(data);
+  },
 };
 
 export const productApi = {
@@ -345,6 +368,46 @@ export const voucherApi = {
 };
 
 export const userApi = {
+  async getProfile() {
+    const response = await api.get('/users/me');
+    return responseData(response);
+  },
+
+  async updateProfile(data) {
+    const response = await api.put('/users/me', {
+      name: data.name,
+      email: data.email,
+      phone: data.phone,
+    });
+    return responseData(response);
+  },
+
+  async changePassword(data) {
+    const response = await api.put('/users/me/password', {
+      currentPassword: data.currentPassword,
+      newPassword: data.newPassword,
+    });
+    return responseData(response);
+  },
+
+  async getAddress() {
+    const response = await api.get('/users/me/address');
+    return responseData(response);
+  },
+
+  async updateAddress(data) {
+    const response = await api.put('/users/me/address', {
+      fullName: data.fullName,
+      phoneNumber: data.phoneNumber,
+      addressLine: data.addressLine,
+      ward: data.ward,
+      province: data.province,
+      note: data.note,
+      isDefault: true,
+    });
+    return responseData(response);
+  },
+
   async getAll(params) {
     const response = await api.get('/users', { params });
     return responseData(response);

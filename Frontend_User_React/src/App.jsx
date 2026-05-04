@@ -12,6 +12,7 @@ import LoginPage from './pages/LoginPage.jsx';
 import NotFoundPage from './pages/NotFoundPage.jsx';
 import OrderDetailPage from './pages/OrderDetailPage.jsx';
 import OrdersPage from './pages/OrdersPage.jsx';
+import AccountPage from './pages/AccountPage.jsx';
 import ProductDetailPage from './pages/ProductDetailPage.jsx';
 import ProductListPage from './pages/ProductListPage.jsx';
 import RegisterPage from './pages/RegisterPage.jsx';
@@ -86,6 +87,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <OrderDetailPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/account"
+          element={
+            <ProtectedRoute>
+              <AccountPage />
             </ProtectedRoute>
           }
         />

@@ -56,6 +56,12 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
+  function updateUser(data) {
+    const nextUser = authApi.updateStoredUser(data);
+    setUser(nextUser);
+    return nextUser;
+  }
+
   function isAdmin() {
     return user?.role === 'Admin' || user?.userType === 1;
   }
@@ -68,6 +74,7 @@ export function AuthProvider({ children }) {
       login,
       register,
       logout,
+      updateUser,
       isAdmin,
       isAuthenticated,
       loading,

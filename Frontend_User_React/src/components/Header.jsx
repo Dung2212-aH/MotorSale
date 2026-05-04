@@ -133,7 +133,12 @@ function Header() {
 
                 {isAuthenticated ? (
                   <>
-                    <span className="px-0 lg:px-3">Xin chào, {getDisplayName(currentUser)}</span>
+                    <Link
+                      className="inline-flex items-center gap-1.5 px-0 font-semibold transition hover:text-[#ffe082] lg:px-3"
+                      to="/account"
+                    >
+                      Xin chào, <span className="underline decoration-white/50 decoration-1 underline-offset-4">{getDisplayName(currentUser)}</span>
+                    </Link>
                     <button
                       type="button"
                       className="inline-flex items-center gap-1.5 bg-transparent px-0 transition hover:text-[#ffe082] lg:px-3"
