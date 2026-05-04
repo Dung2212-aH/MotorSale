@@ -1,16 +1,61 @@
 const inputClassName =
   'min-h-12 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 text-sm text-zinc-900 outline-none transition focus:border-[#d71920] focus:bg-white';
 
+function normalizeText(value = '') {
+  return String(value)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+function isMotorcycleCategory(category) {
+  const text = normalizeText(`${category?.name || ''} ${category?.slug || ''}`);
+  return text.includes('xe may') || text.includes('motorcycle') || text.includes('motorcycles');
+}
+
+function isPartCategory(category) {
+  const text = normalizeText(`${category?.name || ''} ${category?.slug || ''}`);
+  return text.includes('phu tung') || text.includes('phu kien') || text.includes('accessory') || text.includes('accessories');
+}
+
 function ProductFilters({ filters, values, onChange }) {
   const categories = filters?.categories || [];
   const brands = filters?.brands || [];
-  const productTypes = ['Xe tay ga', 'Xe côn tay', 'Xe số'];
+  const parentCategories = categories
+    .filter((category) => !category.parentCategoryId && (isMotorcycleCategory(category) || isPartCategory(category)))
+    .sort((left, right) => (left.sortOrder || 0) - (right.sortOrder || 0));
+  const selectedCategory = categories.find((category) => String(category.id) === String(values.categoryId));
+  const selectedParentCategory = selectedCategory?.parentCategoryId
+    ? categories.find((category) => String(category.id) === String(selectedCategory.parentCategoryId))
+    : selectedCategory;
+  const isSelectedMotorcycle = isMotorcycleCategory(selectedParentCategory);
+  const isSelectedPart = isPartCategory(selectedParentCategory);
+  const motorcycleTypeOptions = selectedParentCategory
+    ? categories
+        .filter((category) => String(category.parentCategoryId) === String(selectedParentCategory.id))
+        .sort((left, right) => (left.sortOrder || 0) - (right.sortOrder || 0))
+    : [];
+  const partCompatibleTypes = filters?.partCompatibleTypes || [];
 
   function update(name, value) {
     const nextValues = { ...values, [name]: value, page: 1 };
 
     if (name === 'categoryId') {
       nextValues.categorySlug = '';
+      nextValues.vehicleTypeCategoryId = '';
+      nextValues.compatibleCarModelId = '';
+      nextValues.productType = '';
+    }
+
+    if (name === 'vehicleTypeCategoryId') {
+      nextValues.compatibleCarModelId = '';
+      nextValues.productType = '';
+    }
+
+    if (name === 'compatibleCarModelId') {
+      nextValues.vehicleTypeCategoryId = '';
+      nextValues.productType = '';
     }
 
     if (name === 'brandId') {
@@ -20,12 +65,15 @@ function ProductFilters({ filters, values, onChange }) {
     onChange(nextValues);
   }
 
+  const typeLabel = isSelectedPart ? 'Loại xe tương thích' : 'Loại xe';
+  const typePlaceholder = isSelectedPart ? 'Tất cả xe tương thích' : 'Tất cả loại xe';
+
   return (
     <aside className="sticky top-28 overflow-hidden rounded-[30px] border border-zinc-200 bg-white shadow-[0_22px_60px_rgba(15,23,42,0.08)]">
       <div className="bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.2),transparent_34%),linear-gradient(135deg,#111111,#d71920)] px-6 py-6 text-white">
         <div className="text-[12px] font-extrabold uppercase tracking-[0.18em] text-white/70">Bộ lọc</div>
-        <h2 className="mt-2 text-[24px] leading-tight font-black">Chọn mẫu xe phù hợp</h2>
-        <p className="mt-2 text-sm leading-6 text-white/80">Lọc nhanh theo danh mục, hãng, khoảng giá và nhu cầu sử dụng.</p>
+        <h2 className="mt-2 text-[24px] leading-tight font-black">Chọn sản phẩm phù hợp</h2>
+        <p className="mt-2 text-sm leading-6 text-white/80">Lọc nhanh theo danh mục, loại xe, hãng, khoảng giá và nhu cầu sử dụng.</p>
       </div>
 
       <div className="space-y-5 p-6">
@@ -43,11 +91,11 @@ function ProductFilters({ filters, values, onChange }) {
           <span className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-zinc-500">Danh mục</span>
           <select
             className={inputClassName}
-            value={values.categoryId || ''}
+            value={selectedParentCategory?.id || values.categoryId || ''}
             onChange={(event) => update('categoryId', event.target.value)}
           >
             <option value="">Tất cả danh mục</option>
-            {categories.map((category) => (
+            {parentCategories.map((category) => (
               <option key={category.id} value={category.id}>
                 {category.name}
               </option>
@@ -55,21 +103,35 @@ function ProductFilters({ filters, values, onChange }) {
           </select>
         </label>
 
-        <label className="grid gap-2.5">
-          <span className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-zinc-500">Loại xe</span>
-          <select
-            className={inputClassName}
-            value={values.productType || ''}
-            onChange={(event) => update('productType', event.target.value)}
-          >
-            <option value="">Tất cả loại xe</option>
-            {productTypes.map((productType) => (
-              <option key={productType} value={productType}>
-                {productType}
-              </option>
-            ))}
-          </select>
-        </label>
+        {(isSelectedMotorcycle || isSelectedPart) && (
+          <label className="grid gap-2.5">
+            <span className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-zinc-500">{typeLabel}</span>
+            <select
+              className={inputClassName}
+              value={
+                isSelectedPart
+                  ? values.compatibleCarModelId || ''
+                  : values.vehicleTypeCategoryId || (selectedCategory?.parentCategoryId ? selectedCategory.id : '')
+              }
+              onChange={(event) =>
+                update(isSelectedPart ? 'compatibleCarModelId' : 'vehicleTypeCategoryId', event.target.value)
+              }
+            >
+              <option value="">{typePlaceholder}</option>
+              {isSelectedPart
+                ? partCompatibleTypes.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {[item.brandName, item.name].filter(Boolean).join(' - ')}
+                    </option>
+                  ))
+                : motorcycleTypeOptions.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+            </select>
+          </label>
+        )}
 
         <label className="grid gap-2.5">
           <span className="text-[12px] font-extrabold uppercase tracking-[0.14em] text-zinc-500">Hãng xe</span>
@@ -130,6 +192,8 @@ function ProductFilters({ filters, values, onChange }) {
               keyword: '',
               categoryId: '',
               categorySlug: '',
+              vehicleTypeCategoryId: '',
+              compatibleCarModelId: '',
               productType: '',
               brandId: '',
               brandSlug: '',

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { authApi } from '../api/authApi.js';
 import { brandAssets, navItems, productBrandGroups, socialLinks } from '../assets/siteData.js';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { useCart } from '../contexts/CartContext.jsx';
 
 function IconPin() {
@@ -90,35 +90,17 @@ function navItemBaseClass(isActive = false) {
 function Header() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [productMenuOpen, setProductMenuOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(() => authApi.getCurrentUser());
-  const { count: cartCount, refreshCart, resetCart } = useCart();
+  const { user: currentUser, isAuthenticated, logout } = useAuth();
+  const { count: cartCount, resetCart } = useCart();
   const navigate = useNavigate();
   const location = useLocation();
-
-  useEffect(() => {
-    setCurrentUser(authApi.getCurrentUser());
-    refreshCart().catch(() => resetCart());
-  }, [location.pathname, location.search, location.hash]);
-
-  useEffect(() => {
-    function handleStorage(event) {
-      if (!event.key || event.key.includes('basecore_user') || event.key === 'token' || event.key === 'user') {
-        setCurrentUser(authApi.getCurrentUser());
-        refreshCart().catch(() => resetCart());
-      }
-    }
-
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, []);
 
   useEffect(() => {
     setProductMenuOpen(false);
   }, [location.pathname, location.search, location.hash]);
 
   function handleLogout() {
-    authApi.logout();
-    setCurrentUser(null);
+    logout();
     resetCart();
     navigate('/');
   }
@@ -144,12 +126,12 @@ function Header() {
           <div className="rounded-xl bg-[#d71920] px-4 py-3 text-white xl:rounded-t-none xl:rounded-br-none xl:rounded-bl-[18px] xl:px-5 xl:py-2.5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex flex-wrap items-center gap-y-2 text-[12px] font-medium xl:text-[13px]">
-                <Link className="inline-flex items-center gap-1.5 border-white/60 pr-3 transition hover:text-[#ffe082] lg:border-r" to="/">
+                <Link className="inline-flex items-center gap-1.5 border-white/60 pr-3 transition hover:text-[#ffe082] lg:border-r" to="/he-thong-cua-hang">
                   <IconPin />
                   Hệ thống cửa hàng
                 </Link>
 
-                {currentUser ? (
+                {isAuthenticated ? (
                   <>
                     <span className="px-0 lg:px-3">Xin chào, {getDisplayName(currentUser)}</span>
                     <button
@@ -255,10 +237,10 @@ function Header() {
                   }
 
                   return (
-                    <Link key={item.label} to={item.to} onClick={(event) => handleNavClick(item, event)} className={navItemBaseClass(false)}>
+                    <NavLink key={item.label} to={item.to} onClick={(event) => handleNavClick(item, event)} className={({ isActive }) => navItemBaseClass(isActive)}>
                       <span>{item.label}</span>
                       {item.hasCaret && <small className="translate-y-[1px] text-[11px] transition duration-300 group-hover:rotate-180">▼</small>}
-                    </Link>
+                    </NavLink>
                   );
                 })}
               </div>
@@ -271,7 +253,7 @@ function Header() {
                   0
                 </span>
               </Link>
-              {currentUser && (
+              {isAuthenticated && (
                 <Link className="group relative inline-grid h-11 w-11 place-items-center rounded-full text-[#111] transition duration-300 hover:bg-zinc-100 hover:text-[#d71920]" to="/orders" aria-label="Đơn hàng">
                   <svg viewBox="0 0 24 24" aria-hidden="true" className="h-7 w-7"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /><path d="M9 14l2 2 4-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
                 </Link>

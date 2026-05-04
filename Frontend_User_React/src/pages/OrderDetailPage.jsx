@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { authApi } from '../api/authApi.js';
-import { orderApi } from '../api/orderApi.js';
-import { paymentApi } from '../api/paymentApi.js';
+import { orderApi, paymentApi } from '../services/api.js';
 import Breadcrumb from '../components/Breadcrumb.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { formatCurrency } from '../utils/formatters.js';
 import {
   getOrderStatusLabel, getOrderStatusColor,
@@ -21,7 +20,7 @@ const SHIPPING_STEPS = ['NotShipped', 'AwaitingPickup', 'Preparing', 'InTransit'
 function OrderDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const isAuth = Boolean(authApi.getToken());
+  const { isAuthenticated: isAuth } = useAuth();
   const [order, setOrder] = useState(null);
   const [details, setDetails] = useState([]);
   const [vouchers, setVouchers] = useState([]);

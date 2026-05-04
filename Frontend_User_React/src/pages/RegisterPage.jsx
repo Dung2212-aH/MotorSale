@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authApi } from '../api/authApi.js';
 import AuthForm from '../components/AuthForm.jsx';
 import Breadcrumb from '../components/Breadcrumb.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 
 function RegisterPage() {
   const navigate = useNavigate();
+  const { register } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -14,7 +15,7 @@ function RegisterPage() {
     setError('');
 
     try {
-      await authApi.register({
+      await register({
         name: `${values.lastName || ''} ${values.firstName || ''}`.trim(),
         username: values.email,
         email: values.email,

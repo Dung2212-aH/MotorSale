@@ -1,10 +1,10 @@
 import { formatCurrency } from '../utils/formatters.js';
 
-function CartSummary({ items, onCheckout }) {
-  const subtotal = items.reduce((sum, item) => {
+function CartSummary({ items, subtotal: backendSubtotal, onCheckout }) {
+  const subtotal = backendSubtotal ?? items.reduce((sum, item) => {
     const quantity = item.quantity || 1;
     const price = item.unitPrice || item.product?.salePrice || item.product?.basePrice || 0;
-    return sum + price * quantity;
+    return sum + (item.lineTotal ?? price * quantity);
   }, 0);
 
   return (

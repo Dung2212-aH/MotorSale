@@ -1,6 +1,7 @@
 function valueOf(source, ...keys) {
   for (const key of keys) {
-    const value = source?.[key];
+    const pascalKey = key ? key[0].toUpperCase() + key.slice(1) : key;
+    const value = source?.[key] ?? source?.[pascalKey];
     if (value !== undefined && value !== null && value !== '') {
       return value;
     }
@@ -175,22 +176,28 @@ function normalizeVariant(variant, product) {
   };
 }
 
-function normalizeImage(image) {
+function normalizeImage(image, variants = []) {
   const raw = image?.raw || image;
   const url = valueOf(image, 'imageUrl', 'url', 'src') || valueOf(raw, 'imageUrl', 'url', 'src') || '';
   const altText = valueOf(image, 'altText', 'name', 'title') || '';
-  const explicitColor = valueOf(raw, 'color', 'colorName', 'colour');
+  const productVariantId = valueOf(image, 'productVariantId') ?? valueOf(raw, 'productVariantId');
+  const linkedVariant = productVariantId
+    ? variants.find((variant) => String(variant.id) === String(productVariantId))
+    : null;
+  const explicitColor = valueOf(raw, 'color', 'colorName', 'colour') || linkedVariant?.color;
+  const explicitVersion = valueOf(raw, 'version') || linkedVariant?.version;
   const inferredColor = explicitColor || inferColorName(altText, url);
 
   return {
     id: valueOf(image, 'id', 'Id') || url,
+    productVariantId,
     imageUrl: url,
     altText,
     sortOrder: valueOf(image, 'sortOrder') || 0,
     color: inferredColor,
     colorSource: explicitColor ? 'api' : inferredColor ? 'inferred' : 'none',
-    version: valueOf(raw, 'version') || '',
-    versionSource: valueOf(raw, 'version') ? 'api' : 'none',
+    version: explicitVersion || '',
+    versionSource: explicitVersion ? 'api' : 'none',
     raw,
   };
 }
@@ -198,7 +205,7 @@ function normalizeImage(image) {
 export function normalizeProductOptions(product) {
   const raw = product?.raw || {};
   const rawVariants = product?.variants || raw?.variants || raw?.productVariants || [];
-  const rawImages = product?.images || raw?.images || raw?.productImages || [];
+  const productImages = product?.images || raw?.images || raw?.productImages || [];
   const rawColors = raw?.colors || raw?.options || raw?.attributes || [];
 
   const variants = uniqueBy(
@@ -206,9 +213,27 @@ export function normalizeProductOptions(product) {
     (variant) => String(variant.id || `${variant.version}-${variant.color}-${variant.sku || ''}`),
   );
 
+  const nestedVariantImages = rawVariants.flatMap((variant) => {
+    const parentVariant = normalizeVariant(variant, product);
+    const variantImages = valueOf(variant, 'images') || [];
+
+    return variantImages.map((image) => ({
+      ...(image?.raw || image),
+      productVariantId: valueOf(image, 'productVariantId') ?? parentVariant?.id,
+      color: valueOf(image, 'color', 'colorName') || parentVariant?.color,
+      version: valueOf(image, 'version') || parentVariant?.version,
+    }));
+  });
+
+  const rawImages = [
+    ...productImages,
+    ...nestedVariantImages,
+    ...(product?.mainImageUrl ? [{ id: 'main-image', imageUrl: product.mainImageUrl, altText: product.name, isPrimary: true, sortOrder: -2 }] : []),
+  ];
+
   const images = uniqueBy(
     rawImages
-      .map((image) => normalizeImage(image))
+      .map((image) => normalizeImage(image, variants))
       .filter((image) => image.imageUrl)
       .sort((left, right) => (left.sortOrder || 0) - (right.sortOrder || 0)),
     (image) => image.imageUrl,
@@ -258,6 +283,7 @@ export function normalizeProductOptions(product) {
       variant.color;
     const mappedImage =
       variant.imageUrl ||
+      canonicalImages.find((image) => String(image.productVariantId || '') === String(variant.id || ''))?.imageUrl ||
       canonicalImages.find((image) => {
         const colorScore = canonicalColor ? colorMatchScore(image.color || '', canonicalColor) : 0;
         const versionMatches = variant.version && image.version ? normalizeText(image.version) === normalizeText(variant.version) : true;

@@ -817,9 +817,9 @@ namespace BaseCore.Repository
             );
 
             modelBuilder.Entity<ProductVariant>().HasData(
-                new ProductVariant { Id = 1, ProductId = 1, VariantName = "160cc - Black", Sku = "AB-160-BLACK", PriceOverride = 55990000, StockQuantity = 6, Status = "Available", Version = "160cc", MainColor = "Black" },
-                new ProductVariant { Id = 2, ProductId = 1, VariantName = "160cc - Red", Sku = "AB-160-RED", PriceOverride = 56990000, StockQuantity = 4, Status = "Available", Version = "160cc", MainColor = "Red" },
-                new ProductVariant { Id = 3, ProductId = 2, VariantName = "155 VVA - Blue", Sku = "EX-155-BLUE", PriceOverride = 50500000, StockQuantity = 5, Status = "Available", Version = "155 VVA", MainColor = "Blue" },
+                new ProductVariant { Id = 1, ProductId = 1, VariantName = "160cc - Black", Sku = "AB-160-BLACK", PriceOverride = 55990000, StockQuantity = 6, Status = "Available", Version = "160cc"},
+                new ProductVariant { Id = 2, ProductId = 1, VariantName = "160cc - Red", Sku = "AB-160-RED", PriceOverride = 56990000, StockQuantity = 4, Status = "Available", Version = "160cc"},
+                new ProductVariant { Id = 3, ProductId = 2, VariantName = "155 VVA - Blue", Sku = "EX-155-BLUE", PriceOverride = 50500000, StockQuantity = 5, Status = "Available", Version = "155 VVA"},
                 new ProductVariant { Id = 4, ProductId = 3, VariantName = "Size L", Sku = "AGV-K3-L", PriceOverride = 4200000, StockQuantity = 15, Status = "Available", Version = "L" },
                 new ProductVariant { Id = 5, ProductId = 3, VariantName = "Size XL", Sku = "AGV-K3-XL", PriceOverride = 4200000, StockQuantity = 10, Status = "Available", Version = "XL" },
                 new ProductVariant { Id = 6, ProductId = 4, VariantName = "Size M", Sku = "GLOVE-ALP-M", PriceOverride = 1500000, StockQuantity = 20, Status = "Available", Version = "M" }

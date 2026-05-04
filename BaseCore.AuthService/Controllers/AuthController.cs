@@ -42,7 +42,7 @@ namespace BaseCore.AuthService.Controllers
 
             // Generate JWT token
             var token = TokenHelper.GenerateToken(
-                _configuration["Jwt:SecretKey"] ?? "YourSecretKeyForAuthenticationShouldBeLongEnough",
+                _configuration["Jwt:SecretKey"] ?? "1236184618686ansbfasbfakcbakjsckjsabncsdjcbsdjcbsjcb",
                 TokenExpirationMinutes,
                 user.Id.ToString(),
                 user.Email,

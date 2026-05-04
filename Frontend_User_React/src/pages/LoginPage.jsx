@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { authApi } from '../api/authApi.js';
 import AuthForm from '../components/AuthForm.jsx';
 import Breadcrumb from '../components/Breadcrumb.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 
 function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { login } = useAuth();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -15,8 +16,8 @@ function LoginPage() {
     setError('');
 
     try {
-      await authApi.login(values);
-      navigate(searchParams.get('redirect') || '/');
+      await login(values);
+      navigate(searchParams.get('redirect') || '/', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {

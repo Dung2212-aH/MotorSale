@@ -1,14 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { authApi } from '../api/authApi.js';
-import { orderApi } from '../api/orderApi.js';
-import { productApi } from '../api/productApi.js';
+import { orderApi, productApi } from '../services/api.js';
 import { brandAssets, homeCategoryReferences, serviceHighlights } from '../assets/siteData.js';
 import CategoryMenu from '../components/CategoryMenu.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import LoadingState from '../components/LoadingState.jsx';
 import ProductGrid from '../components/ProductGrid.jsx';
 import SectionTitle from '../components/SectionTitle.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { useCart } from '../contexts/CartContext.jsx';
 import { useNotification } from '../contexts/NotificationContext.jsx';
 
@@ -45,6 +44,7 @@ function buildFeaturedCategories(categories) {
 function HomePage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
   const { addItem } = useCart();
   const { notify } = useNotification();
   const [products, setProducts] = useState([]);
@@ -64,7 +64,7 @@ function HomePage() {
         productApi.getCategories(),
       ];
 
-      if (authApi.getToken()) {
+      if (isAuthenticated) {
         tasks.push(orderApi.getMyOrders().catch(() => []));
       }
 
@@ -93,7 +93,7 @@ function HomePage() {
 
   useEffect(() => {
     loadHomeData();
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     if (!location.hash) {
@@ -108,10 +108,18 @@ function HomePage() {
     return () => window.cancelAnimationFrame(frame);
   }, [location.hash]);
 
-  async function addToCart(product) {
-    if (!authApi.getToken()) {
+  function requireLogin() {
+    if (!isAuthenticated) {
       notify('Vui lòng đăng nhập để thêm vào giỏ hàng', 'error');
       navigate('/login?redirect=/cart');
+      return false;
+    }
+
+    return true;
+  }
+
+  async function addToCart(product) {
+    if (!requireLogin()) {
       return;
     }
 

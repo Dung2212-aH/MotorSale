@@ -35,6 +35,7 @@ namespace BaseCore.APIService.Controllers
             [FromQuery] string? productType,
             [FromQuery] int? brandId,
             [FromQuery] int? carModelId,
+            [FromQuery] int? compatibleCarModelId,
             [FromQuery] decimal? minPrice,
             [FromQuery] decimal? maxPrice,
             [FromQuery] string? color,
@@ -53,6 +54,7 @@ namespace BaseCore.APIService.Controllers
                 productType,
                 brandId,
                 carModelId,
+                compatibleCarModelId,
                 minPrice,
                 maxPrice,
                 null,
@@ -101,6 +103,20 @@ namespace BaseCore.APIService.Controllers
                 .OrderBy(s => s.Name)
                 .ToListAsync();
 
+            var partCompatibleTypes = await _context.PartCompatibilities
+                .Where(pc => pc.IsActive && pc.CarModelId.HasValue && pc.CarModel != null)
+                .Select(pc => new
+                {
+                    Id = pc.CarModelId!.Value,
+                    Name = pc.CarModel!.Name,
+                    BrandId = pc.BrandId ?? pc.CarModel.BrandId,
+                    BrandName = pc.Brand != null ? pc.Brand.Name : pc.CarModel.Brand != null ? pc.CarModel.Brand.Name : null
+                })
+                .Distinct()
+                .OrderBy(item => item.BrandName)
+                .ThenBy(item => item.Name)
+                .ToListAsync();
+
             return Ok(new
             {
                 categories = categories.Select(c => new
@@ -142,7 +158,8 @@ namespace BaseCore.APIService.Controllers
                     s.Email,
                     s.OpeningHours,
                     s.IsActive
-                })
+                }),
+                partCompatibleTypes
             });
         }
 

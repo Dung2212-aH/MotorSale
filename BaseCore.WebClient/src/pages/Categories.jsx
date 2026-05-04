@@ -144,7 +144,6 @@ const Categories = () => {
                                         <tr>
                                             <th style={{ width: '80px' }}>ID</th>
                                             <th>Name</th>
-                                            <th>Slug</th>
                                             <th>Parent</th>
                                             <th>Description</th>
                                             <th>Status</th>
@@ -154,7 +153,7 @@ const Categories = () => {
                                     <tbody>
                                         {categories.length === 0 ? (
                                             <tr>
-                                                <td colSpan={isAdmin() ? 7 : 6} className="text-center">
+                                                <td colSpan={isAdmin() ? 6 : 5} className="text-center">
                                                     No categories found
                                                 </td>
                                             </tr>
@@ -163,7 +162,6 @@ const Categories = () => {
                                                 <tr key={category.id}>
                                                     <td>{category.id}</td>
                                                     <td>{category.name}</td>
-                                                    <td>{category.slug}</td>
                                                     <td>{category.parentCategory?.name || '-'}</td>
                                                     <td>{category.description}</td>
                                                     <td>

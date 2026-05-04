@@ -14,6 +14,7 @@ namespace BaseCore.Repository.EFCore
             string? productType,
             int? brandId,
             int? carModelId,
+            int? compatibleCarModelId,
             decimal? minPrice,
             decimal? maxPrice,
             int? year,
@@ -71,6 +72,7 @@ namespace BaseCore.Repository.EFCore
             string? productType,
             int? brandId,
             int? carModelId,
+            int? compatibleCarModelId,
             decimal? minPrice,
             decimal? maxPrice,
             int? year,
@@ -105,7 +107,17 @@ namespace BaseCore.Repository.EFCore
 
             if (categoryId.HasValue && categoryId > 0)
             {
-                query = query.Where(p => p.CategoryId == categoryId);
+                var categoryIds = await _context.Categories
+                    .Where(c => c.Id == categoryId.Value || c.ParentCategoryId == categoryId.Value)
+                    .Select(c => c.Id)
+                    .ToListAsync();
+
+                if (categoryIds.Count == 0)
+                {
+                    categoryIds.Add(categoryId.Value);
+                }
+
+                query = query.Where(p => categoryIds.Contains(p.CategoryId));
             }
 
             if (!string.IsNullOrWhiteSpace(productType))
@@ -121,6 +133,14 @@ namespace BaseCore.Repository.EFCore
             if (carModelId.HasValue && carModelId > 0)
             {
                 query = query.Where(p => p.CarModelId == carModelId);
+            }
+
+            if (compatibleCarModelId.HasValue && compatibleCarModelId > 0)
+            {
+                query = query.Where(p => _context.PartCompatibilities.Any(pc =>
+                    pc.PartProductId == p.Id &&
+                    pc.IsActive &&
+                    (pc.AppliesToAllMotorcycles || pc.CarModelId == compatibleCarModelId.Value)));
             }
 
             if (minPrice.HasValue)

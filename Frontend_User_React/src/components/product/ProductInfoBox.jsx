@@ -76,7 +76,11 @@ function ProductInfoBox({
   const price = selectedVariant?.priceOverride ?? product?.salePrice ?? product?.basePrice ?? 0;
   const formattedPrice = price > 0 ? formatCurrency(price) : 'Liên hệ';
   const stockValue = selectedVariant?.stockQuantity ?? product?.stockQuantity;
-  const isInStock = Number(stockValue || 0) > 0 || normalizeText(selectedVariant?.status || product?.status).includes('available');
+  const hasKnownStock = stockValue !== undefined && stockValue !== null;
+  const isInStock = hasKnownStock
+    ? Number(stockValue) > 0
+    : normalizeText(selectedVariant?.status || product?.status).includes('available');
+  const maxQuantity = hasKnownStock ? Math.max(Number(stockValue), 1) : 99;
   const infoItems = [
     { label: 'Loại', value: product?.productType || product?.categoryName || 'Đang cập nhật' },
     { label: 'Thương hiệu', value: product?.brandName || 'Đang cập nhật' },
@@ -182,19 +186,21 @@ function ProductInfoBox({
           </div>
 
           <div className="flex flex-col gap-3">
-            <QuantitySelector value={quantity} onChange={onQuantityChange} max={Math.max(Number(stockValue || 99), 1)} />
+            <QuantitySelector value={quantity} onChange={onQuantityChange} max={maxQuantity} />
             <div className="grid gap-3 sm:grid-cols-2">
               <button
                 type="button"
-                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#d71920] px-5 text-sm font-bold text-white transition hover:bg-[#b9161c]"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#d71920] px-5 text-sm font-bold text-white transition hover:bg-[#b9161c] disabled:cursor-not-allowed disabled:bg-zinc-300"
                 onClick={onAddToCart}
+                disabled={!isInStock}
               >
                 Thêm vào giỏ hàng
               </button>
               <button
                 type="button"
-                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-zinc-900 bg-white px-5 text-sm font-bold text-zinc-900 transition hover:border-[#d71920] hover:text-[#d71920]"
+                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-zinc-900 bg-white px-5 text-sm font-bold text-zinc-900 transition hover:border-[#d71920] hover:text-[#d71920] disabled:cursor-not-allowed disabled:border-zinc-200 disabled:text-zinc-400"
                 onClick={onBuyNow}
+                disabled={!isInStock}
               >
                 Mua ngay
               </button>

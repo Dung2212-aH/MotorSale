@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authApi } from '../api/authApi.js';
-import { orderApi } from '../api/orderApi.js';
+import { orderApi } from '../services/api.js';
 import Breadcrumb from '../components/Breadcrumb.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { formatCurrency } from '../utils/formatters.js';
 import {
   getOrderStatusLabel, getOrderStatusColor,
@@ -21,7 +21,7 @@ function StatusBadge({ label, colorClass }) {
 
 function OrdersPage() {
   const navigate = useNavigate();
-  const isAuthenticated = Boolean(authApi.getToken());
+  const { isAuthenticated } = useAuth();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');

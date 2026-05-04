@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { authApi } from '../api/authApi.js';
-import { productApi } from '../api/productApi.js';
+import { productApi } from '../services/api.js';
 import Breadcrumb from '../components/Breadcrumb.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import LoadingState from '../components/LoadingState.jsx';
 import ProductFilters from '../components/ProductFilters.jsx';
 import ProductGrid from '../components/ProductGrid.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { useCart } from '../contexts/CartContext.jsx';
 import { useNotification } from '../contexts/NotificationContext.jsx';
 
@@ -66,6 +66,7 @@ function matchesProductType(product, expectedProductType) {
 function ProductListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const { addItem } = useCart();
   const { notify } = useNotification();
   const [filters, setFilters] = useState(null);
@@ -78,6 +79,8 @@ function ProductListPage() {
       keyword: searchParams.get('keyword') || '',
       categoryId: searchParams.get('categoryId') || '',
       categorySlug: searchParams.get('categorySlug') || '',
+      vehicleTypeCategoryId: searchParams.get('vehicleTypeCategoryId') || '',
+      compatibleCarModelId: searchParams.get('compatibleCarModelId') || '',
       productType: searchParams.get('productType') || '',
       brandId: searchParams.get('brandId') || '',
       brandSlug: searchParams.get('brandSlug') || '',
@@ -125,10 +128,11 @@ function ProductListPage() {
   const apiQueryValues = useMemo(() => {
     const nextValues = {
       ...queryValues,
-      categoryId: resolvedCategoryId,
+      categoryId: queryValues.vehicleTypeCategoryId || resolvedCategoryId,
       brandId: resolvedBrandId,
       categorySlug: undefined,
       brandSlug: undefined,
+      vehicleTypeCategoryId: undefined,
     };
 
     if (queryValues.productType) {
@@ -180,10 +184,18 @@ function ProductListPage() {
     load();
   }, [apiQueryValues]);
 
-  async function addToCart(product) {
-    if (!authApi.getToken()) {
+  function requireLogin() {
+    if (!isAuthenticated) {
       notify('Vui lòng đăng nhập để thêm vào giỏ hàng', 'error');
       navigate('/login?redirect=/cart');
+      return false;
+    }
+
+    return true;
+  }
+
+  async function addToCart(product) {
+    if (!requireLogin()) {
       return;
     }
 
@@ -208,8 +220,16 @@ function ProductListPage() {
 
   const products = productsData?.items || [];
   const activeCategory = filters?.categories?.find((category) => String(category.id) === String(resolvedCategoryId));
+  const activeVehicleType = filters?.categories?.find((category) => String(category.id) === String(queryValues.vehicleTypeCategoryId));
+  const activeCompatibleType = filters?.partCompatibleTypes?.find((item) => String(item.id) === String(queryValues.compatibleCarModelId));
   const activeBrand = filters?.brands?.find((brand) => String(brand.id) === String(resolvedBrandId));
-  const pageTitle = activeCategory?.name || queryValues.productType || activeBrand?.name || 'Tất cả sản phẩm';
+  const pageTitle =
+    activeVehicleType?.name ||
+    (activeCompatibleType ? `Phụ tùng cho ${[activeCompatibleType.brandName, activeCompatibleType.name].filter(Boolean).join(' - ')}` : '') ||
+    activeCategory?.name ||
+    queryValues.productType ||
+    activeBrand?.name ||
+    'Tất cả sản phẩm';
 
   return (
     <>
@@ -222,6 +242,8 @@ function ProductListPage() {
             values={{
               ...queryValues,
               categoryId: resolvedCategoryId || queryValues.categoryId,
+              vehicleTypeCategoryId: queryValues.vehicleTypeCategoryId,
+              compatibleCarModelId: queryValues.compatibleCarModelId,
               brandId: resolvedBrandId || queryValues.brandId,
             }}
             onChange={updateFilters}

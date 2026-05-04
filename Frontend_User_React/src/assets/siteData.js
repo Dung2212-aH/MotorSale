@@ -90,7 +90,7 @@ export const navItems = [
   { label: 'Trang chủ', to: '/' },
   { label: 'Sản phẩm', to: '/products', hasCaret: true },
   { label: 'Liên hệ', to: '/' },
-  { label: 'Hệ thống cửa hàng', to: '/' },
+  { label: 'Hệ thống cửa hàng', to: '/he-thong-cua-hang' },
   { label: 'Câu hỏi thường gặp', to: '/' },
 ];
 

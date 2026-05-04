@@ -24,11 +24,9 @@ namespace BaseCore.Common.Extensions
             var extensionToLower = fileExtension.ToLower();
             if (imageExtensions.Any(x => fileExtension.Contains(x)))
                 return MediaType.Image;
-
      
             if (pdfExtensions.Any(x => fileExtension.Contains(x)))
                 return MediaType.Pdf;
-
 
             if (docExtensions.Any(x => fileExtension.Contains(x)))
                 return MediaType.Doc;
@@ -37,7 +35,5 @@ namespace BaseCore.Common.Extensions
                 return MediaType.Video;
             return MediaType.File;
         }
-
-
     }
 }

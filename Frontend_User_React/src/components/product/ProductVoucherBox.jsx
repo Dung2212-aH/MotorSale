@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 
-import { voucherApi } from '../../api/voucherApi.js';
+import { voucherApi } from '../../services/api.js';
 
 function formatMoney(value) {
   return `${Number(value || 0).toLocaleString('vi-VN')}đ`;

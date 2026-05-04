@@ -1,24 +1,23 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authApi } from '../api/authApi.js';
 import Breadcrumb from '../components/Breadcrumb.jsx';
 import CartItemRow from '../components/CartItemRow.jsx';
 import CartSummary from '../components/CartSummary.jsx';
 import EmptyCart from '../components/EmptyCart.jsx';
 import ErrorState from '../components/ErrorState.jsx';
 import LoadingState from '../components/LoadingState.jsx';
+import { useAuth } from '../contexts/AuthContext.jsx';
 import { useCart } from '../contexts/CartContext.jsx';
 
 function CartPage() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const { cart, loading, refreshCart, updateItem, removeItem: removeCartItem } = useCart();
   const [error, setError] = useState(null);
   const [checkoutNotice, setCheckoutNotice] = useState('');
-  const isAuthenticated = Boolean(authApi.getToken());
 
   async function loadCart() {
     if (!isAuthenticated) {
-      setLoading(false);
       return;
     }
 
@@ -27,12 +26,6 @@ function CartPage() {
     try {
       await refreshCart();
     } catch (err) {
-      if (err.status === 401) {
-        authApi.logout();
-        navigate('/login?redirect=/cart', { replace: true });
-        return;
-      }
-
       setError(err);
     }
   }
@@ -42,14 +35,29 @@ function CartPage() {
   }, [isAuthenticated]);
 
   async function updateQuantity(itemId, quantity) {
-    await updateItem(itemId, quantity);
+    setCheckoutNotice('');
+    try {
+      await updateItem(itemId, quantity);
+    } catch (err) {
+      setCheckoutNotice(err.message || 'Khong the cap nhat so luong trong gio hang.');
+    }
   }
 
   async function removeItem(itemId) {
-    await removeCartItem(itemId);
+    setCheckoutNotice('');
+    try {
+      await removeCartItem(itemId);
+    } catch (err) {
+      setCheckoutNotice(err.message || 'Khong the xoa san pham khoi gio hang.');
+    }
   }
 
   function checkout() {
+    if (!items.length) {
+      setCheckoutNotice('Gio hang trong. Vui long them san pham truoc khi thanh toan.');
+      return;
+    }
+
     navigate('/checkout');
   }
 
@@ -99,7 +107,7 @@ function CartPage() {
               ))}
           </div>
 
-          {isAuthenticated && <CartSummary items={items} onCheckout={checkout} />}
+          {isAuthenticated && <CartSummary items={items} subtotal={cart?.subtotal} onCheckout={checkout} />}
         </div>
       </section>
     </>

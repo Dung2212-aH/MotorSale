@@ -4,8 +4,12 @@ import { formatCurrency, getProductImage } from '../utils/formatters.js';
 
 function CartItemRow({ item, onQuantityChange, onRemove }) {
   const product = item.product || {};
+  const variant = item.productVariant || {};
   const quantity = item.quantity || 1;
   const unitPrice = item.unitPrice || product.salePrice || product.basePrice || 0;
+  const lineTotal = item.lineTotal ?? unitPrice * quantity;
+  const stockValue = variant.stockQuantity ?? product.stockQuantity;
+  const maxQuantity = stockValue === undefined || stockValue === null ? 99 : Math.max(1, Number(stockValue));
   const imageUrl = getProductImage(product);
 
   return (
@@ -26,16 +30,19 @@ function CartItemRow({ item, onQuantityChange, onRemove }) {
         </Link>
         <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-zinc-500">
           <span>{product.brandName || product.categoryName || 'EURO Moto'}</span>
+          {(variant.variantName || variant.version || variant.color) && (
+            <span>{[variant.variantName, variant.version, variant.color].filter(Boolean).join(' / ')}</span>
+          )}
           <span>Mã: {product.productCode || item.productId || 'N/A'}</span>
         </div>
         <div className="mt-3 text-sm font-extrabold text-[#d71920]">{formatCurrency(unitPrice)}</div>
       </div>
 
       <div className="xl:justify-self-center">
-        <QuantitySelector value={quantity} onChange={(value) => onQuantityChange(item.id, value)} />
+        <QuantitySelector value={quantity} onChange={(value) => onQuantityChange(item.id, value)} max={maxQuantity} />
       </div>
 
-      <strong className="text-lg font-black text-zinc-950 xl:justify-self-end">{formatCurrency(unitPrice * quantity)}</strong>
+      <strong className="text-lg font-black text-zinc-950 xl:justify-self-end">{formatCurrency(lineTotal)}</strong>
 
       <button
         type="button"

@@ -77,7 +77,7 @@ builder.Services.AddScoped<IOrderDetailRepositoryEF, OrderDetailRepositoryEF>();
 
 // JWT Authentication
 var key = Encoding.ASCII.GetBytes(
-    builder.Configuration["Jwt:SecretKey"] ?? "YourSecretKeyForAuthenticationShouldBeLongEnough"
+    builder.Configuration["Jwt:SecretKey"] ?? "1236184618686ansbfasbfakcbakjsckjsabncsdjcbsdjcbsjcb"
 );
 
 builder.Services.AddAuthentication(x =>
@@ -135,6 +135,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 Console.WriteLine("BaseCore Auto Showroom API Service running...");
-Console.WriteLine("Endpoints: /api/products, /api/categories, /api/orders");
+Console.WriteLine("Endpoints: /api/products, /api/categories, /api/stores, /api/orders");
 
 app.Run();

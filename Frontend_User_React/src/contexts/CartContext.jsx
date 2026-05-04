@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { authApi } from '../api/authApi.js';
-import { cartApi } from '../api/cartApi.js';
+import { cartApi } from '../services/api.js';
+import { useAuth } from './AuthContext.jsx';
 import { CART_CHANGED_EVENT } from '../utils/cartEvents.js';
 
 const emptyCart = { items: [], totalItems: 0, subtotal: 0 };
@@ -10,7 +10,13 @@ function getCartCount(cart) {
   return Number(cart?.totalItems ?? cart?.items?.reduce((sum, item) => sum + Number(item.quantity || 0), 0) ?? 0);
 }
 
+function getItemStock(item) {
+  const stock = item?.productVariant?.stockQuantity ?? item?.product?.stockQuantity;
+  return stock === undefined || stock === null ? null : Number(stock);
+}
+
 export function CartProvider({ children }) {
+  const { isAuthenticated } = useAuth();
   const [cart, setCart] = useState(emptyCart);
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -27,7 +33,7 @@ export function CartProvider({ children }) {
   }
 
   async function refreshCart() {
-    if (!authApi.getToken()) {
+    if (!isAuthenticated) {
       resetCart();
       return emptyCart;
     }
@@ -37,8 +43,7 @@ export function CartProvider({ children }) {
       const nextCart = await cartApi.getCart();
       return applyCart(nextCart);
     } catch (error) {
-      if (error.status === 401) {
-        authApi.logout();
+      if (error.response?.status === 401) {
         resetCart();
       }
       throw error;
@@ -53,6 +58,13 @@ export function CartProvider({ children }) {
   }
 
   async function updateItem(itemId, quantity) {
+    const currentItem = cart?.items?.find((item) => String(item.id) === String(itemId));
+    const stock = getItemStock(currentItem);
+
+    if (stock !== null && Number(quantity) > stock) {
+      throw new Error(`Số lượng vượt quá tồn kho hiện có (${stock})`);
+    }
+
     const nextCart = await cartApi.updateItem(itemId, quantity);
     return applyCart(nextCart);
   }
@@ -69,7 +81,7 @@ export function CartProvider({ children }) {
 
   useEffect(() => {
     refreshCart().catch(() => resetCart());
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
     function handleCartChanged(event) {
@@ -79,7 +91,7 @@ export function CartProvider({ children }) {
     }
 
     function handleStorage(event) {
-      if (!event.key || event.key.includes('basecore_user') || event.key === 'token' || event.key === 'user') {
+      if (!event.key || event.key === 'token' || event.key === 'user') {
         refreshCart().catch(() => resetCart());
       }
     }
@@ -90,7 +102,7 @@ export function CartProvider({ children }) {
       window.removeEventListener(CART_CHANGED_EVENT, handleCartChanged);
       window.removeEventListener('storage', handleStorage);
     };
-  }, []);
+  }, [isAuthenticated]);
 
   const value = useMemo(
     () => ({
