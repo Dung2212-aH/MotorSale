@@ -21,6 +21,42 @@ const api = axios.create({
   },
 });
 
+const getStorage = (type) => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    return window[type];
+  } catch {
+    return null;
+  }
+};
+
+const sessionAuthStorage = {
+  getItem(key) {
+    return getStorage('sessionStorage')?.getItem(key) ?? null;
+  },
+
+  setItem(key, value) {
+    getStorage('sessionStorage')?.setItem(key, value);
+  },
+
+  removeItem(key) {
+    getStorage('sessionStorage')?.removeItem(key);
+  },
+};
+
+const legacyAuthStorage = {
+  getItem(key) {
+    return getStorage('localStorage')?.getItem(key) ?? null;
+  },
+
+  removeItem(key) {
+    getStorage('localStorage')?.removeItem(key);
+  },
+};
+
 const responseData = (response) => response.data;
 
 const cleanParams = (params = {}) => {
@@ -45,8 +81,10 @@ const notifyAuthChanged = (user = null) => {
 };
 
 const clearAuthStorage = (notify = true) => {
-  localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(USER_KEY);
+  sessionAuthStorage.removeItem(TOKEN_KEY);
+  sessionAuthStorage.removeItem(USER_KEY);
+  legacyAuthStorage.removeItem(TOKEN_KEY);
+  legacyAuthStorage.removeItem(USER_KEY);
 
   if (notify) {
     notifyAuthChanged(null);
@@ -54,7 +92,7 @@ const clearAuthStorage = (notify = true) => {
 };
 
 const getStoredUser = () => {
-  const rawUser = localStorage.getItem(USER_KEY);
+  const rawUser = sessionAuthStorage.getItem(USER_KEY);
 
   if (!rawUser) {
     return null;
@@ -65,6 +103,17 @@ const getStoredUser = () => {
   } catch {
     return null;
   }
+};
+
+const isTokenExpired = (token) => {
+  const claims = decodeJwtPayload(token);
+  const expiresAt = Number(claims?.exp);
+
+  if (!Number.isFinite(expiresAt)) {
+    return true;
+  }
+
+  return Date.now() >= expiresAt * 1000;
 };
 
 const decodeJwtPayload = (token) => {
@@ -111,17 +160,17 @@ const saveAuthUser = (user) => {
     throw new Error('Không nhận được token đăng nhập từ máy chủ');
   }
 
-  if (user.token) {
-    localStorage.setItem(TOKEN_KEY, user.token);
-  }
+  sessionAuthStorage.setItem(TOKEN_KEY, user.token);
+  sessionAuthStorage.setItem(USER_KEY, JSON.stringify(user));
+  legacyAuthStorage.removeItem(TOKEN_KEY);
+  legacyAuthStorage.removeItem(USER_KEY);
 
-  localStorage.setItem(USER_KEY, JSON.stringify(user));
   notifyAuthChanged(user);
 };
 
 const mergeStoredUser = (data = {}) => {
   const currentUser = getStoredUser();
-  const token = currentUser?.token || localStorage.getItem(TOKEN_KEY);
+  const token = currentUser?.token || getToken();
 
   if (!token) {
     return null;
@@ -133,14 +182,14 @@ const mergeStoredUser = (data = {}) => {
     token,
   };
 
-  localStorage.setItem(USER_KEY, JSON.stringify(nextUser));
+  sessionAuthStorage.setItem(USER_KEY, JSON.stringify(nextUser));
   notifyAuthChanged(nextUser);
   return nextUser;
 };
 
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem(TOKEN_KEY);
+    const token = getToken();
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -175,9 +224,14 @@ export const authApi = {
   },
 
   getCurrentUser() {
-    const token = this.getToken();
+    const token = getToken();
 
     if (!token) {
+      clearAuthStorage(false);
+      return null;
+    }
+
+    if (isTokenExpired(token)) {
       clearAuthStorage(false);
       return null;
     }
@@ -199,12 +253,27 @@ export const authApi = {
     };
   },
 
-  getToken: () => localStorage.getItem(TOKEN_KEY),
+  getToken: () => getToken(),
 
   updateStoredUser(data) {
     return mergeStoredUser(data);
   },
 };
+
+function getToken() {
+  const token = sessionAuthStorage.getItem(TOKEN_KEY);
+
+  if (token) {
+    return token;
+  }
+
+  const legacyToken = legacyAuthStorage.getItem(TOKEN_KEY);
+  if (legacyToken) {
+    clearAuthStorage(false);
+  }
+
+  return null;
+}
 
 export const productApi = {
   async getAll(params) {

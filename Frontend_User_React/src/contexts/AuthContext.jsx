@@ -66,7 +66,7 @@ export function AuthProvider({ children }) {
     return user?.role === 'Admin' || user?.userType === 1;
   }
 
-  const isAuthenticated = Boolean(authApi.getToken());
+  const isAuthenticated = Boolean(user?.token);
 
   const value = useMemo(
     () => ({

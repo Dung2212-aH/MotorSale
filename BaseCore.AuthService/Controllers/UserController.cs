@@ -213,22 +213,22 @@ namespace BaseCore.AuthService.Controllers
             var defaultFlag = request.IsDefault ? 1 : 0;
 
             await _context.Database.ExecuteSqlInterpolatedAsync($@"
-MERGE dbo.NGUOIDUNG_DIACHI AS target
-USING (SELECT {user.Id} AS MaNguoiDung) AS source
-ON target.MaNguoiDung = source.MaNguoiDung
-WHEN MATCHED THEN
-    UPDATE SET
-        HoTenNhanHang = {request.FullName.Trim()},
-        SoDienThoaiNhanHang = {request.PhoneNumber.Trim()},
-        DiaChiNhanHang = {request.AddressLine.Trim()},
-        PhuongXa = {request.Ward},
-        TinhThanh = {request.Province.Trim()},
-        GhiChu = {request.Note},
-        LaMacDinh = {defaultFlag},
-        NgayCapNhat = {now}
-WHEN NOT MATCHED THEN
-    INSERT (MaNguoiDung, HoTenNhanHang, SoDienThoaiNhanHang, DiaChiNhanHang, PhuongXa, TinhThanh, GhiChu, LaMacDinh, NgayTao, NgayCapNhat)
-    VALUES ({user.Id}, {request.FullName.Trim()}, {request.PhoneNumber.Trim()}, {request.AddressLine.Trim()}, {request.Ward}, {request.Province.Trim()}, {request.Note}, {defaultFlag}, {now}, {now});");
+            MERGE dbo.NGUOIDUNG_DIACHI AS target
+            USING (SELECT {user.Id} AS MaNguoiDung) AS source
+            ON target.MaNguoiDung = source.MaNguoiDung
+            WHEN MATCHED THEN
+                UPDATE SET
+                    HoTenNhanHang = {request.FullName.Trim()},
+                    SoDienThoaiNhanHang = {request.PhoneNumber.Trim()},
+                    DiaChiNhanHang = {request.AddressLine.Trim()},
+                    PhuongXa = {request.Ward},
+                    TinhThanh = {request.Province.Trim()},
+                    GhiChu = {request.Note},
+                    LaMacDinh = {defaultFlag},
+                    NgayCapNhat = {now}
+            WHEN NOT MATCHED THEN
+                INSERT (MaNguoiDung, HoTenNhanHang, SoDienThoaiNhanHang, DiaChiNhanHang, PhuongXa, TinhThanh, GhiChu, LaMacDinh, NgayTao, NgayCapNhat)
+                VALUES ({user.Id}, {request.FullName.Trim()}, {request.PhoneNumber.Trim()}, {request.AddressLine.Trim()}, {request.Ward}, {request.Province.Trim()}, {request.Note}, {defaultFlag}, {now}, {now});");
 
             var address = await ReadAddressAsync(user.Id);
             return Ok(address);
